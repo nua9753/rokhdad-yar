@@ -1,47 +1,67 @@
-# با هر تگ v* (مثلاً v2.14.0): بستهٔ نصبی rokhdadyar.zip ساخته و به یک Release تازه ضمیمه می‌شود.
+# انتشار خودکار: هر بار که روی main پوش شود و شمارهٔ Version در rokhdadyar.php تازه باشد،
+# بستهٔ نصبی rokhdadyar.zip ساخته و Release با تگ v<نسخه> منتشر می‌شود.
 # سایت‌ها از همین Release به‌روزرسانی را در پیشخوان وردپرس می‌بینند.
 name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check version matches tag
+      - name: Read version
+        id: ver
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           VER=$(grep -m1 -E '^\s*\*\s*Version:' rokhdadyar.php | sed -E 's/.*Version:\s*//; s/\s+$//')
-          echo "tag=$TAG header=$VER"
-          if [ "$TAG" != "$VER" ]; then echo "::error::Version in rokhdadyar.php ($VER) does not match tag ($TAG)"; exit 1; fi
+          CONST=$(grep -m1 "ROKHDADYAR_VER" rokhdadyar.php | sed -E "s/.*'([0-9.]+)'.*/\1/")
+          echo "header=$VER const=$CONST"
+          if [ "$VER" != "$CONST" ]; then echo "::error::Version ($VER) and ROKHDADYAR_VER ($CONST) differ"; exit 1; fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if already released
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.ver.outputs.version }}" >/dev/null 2>&1; then
+            echo "Release v${{ steps.ver.outputs.version }} already exists; nothing to do."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: PHP syntax check
+        if: steps.exists.outputs.skip != '1'
         run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
 
       - name: Build package
+        if: steps.exists.outputs.skip != '1'
         run: |
           mkdir -p build/rokhdadyar
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' ./ build/rokhdadyar/
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude 'README.md' ./ build/rokhdadyar/
           cd build && zip -qr rokhdadyar.zip rokhdadyar
 
       - name: Release notes
+        if: steps.exists.outputs.skip != '1'
         run: |
-          VER="${GITHUB_REF_NAME#v}"
-          awk -v v="$VER" '$0 ~ "^= "v" =" {f=1; next} /^= / {f=0} f' readme.txt > notes.md
+          VER="${{ steps.ver.outputs.version }}"
+          awk -v v="$VER" '$0 == "= "v" =" {f=1; next} /^= / {f=0} f' readme.txt > notes.md
           [ -s notes.md ] || echo "نسخهٔ $VER" > notes.md
           cat notes.md
 
       - name: Publish release
+        if: steps.exists.outputs.skip != '1'
         uses: softprops/action-gh-release@v2
         with:
-          name: رخدادیار ${{ github.ref_name }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: رخدادیار ${{ steps.ver.outputs.version }}
           body_path: notes.md
           files: build/rokhdadyar.zip
+          make_latest: true
