@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       رخدادیار — عنوان، چکیده، نامک و تصویر شاخص با هوش مصنوعی
  * Description:       ساخت عنوان، چکیده، نامک، دسته و برچسب و تصویر شاخص نوشته با هوش مصنوعی؛ با مرکز کنترل برای مدل‌ها، Base URL، کلید API و پرامپت‌ها.
- * Version:           2.14.1
+ * Version:           2.15.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            رخدادیار
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ROKHDADYAR_VER', '2.14.1' );
+define( 'ROKHDADYAR_VER', '2.15.0' );
 define( 'ROKHDADYAR_FILE', __FILE__ );
 define( 'ROKHDADYAR_DIR', __DIR__ . '/' );
 
@@ -54,11 +54,11 @@ $rokhdadyar_front = get_option( 'rokhdadyar_front' );
 if ( ! empty( $rokhdadyar_front['on'] ) ) {
 	add_action( 'init', array( 'Rokhdadyar\\Toolbox', 'register_meta' ) );
 	if ( ! is_admin() && ! empty( $rokhdadyar_front['map'] ) ) {
-		add_action( 'pre_get_posts', array( 'Rokhdadyar\\Pin', 'pre_get_posts' ) );
-		add_filter( 'the_posts', array( 'Rokhdadyar\\Pin', 'the_posts' ), 10, 2 );
+		add_filter( 'posts_clauses', array( 'Rokhdadyar\\Pin', 'clauses' ), 20, 2 );
 		add_filter( 'the_title', array( 'Rokhdadyar\\Pin', 'the_title' ), 10, 2 );
 		add_filter( 'post_class', array( 'Rokhdadyar\\Pin', 'post_class' ), 10, 3 );
 		add_action( 'wp_enqueue_scripts', array( 'Rokhdadyar\\Pin', 'styles' ) );
+		add_action( 'wp_footer', array( 'Rokhdadyar\\Pin', 'footer_script' ), 99 );
 	}
 }
 unset( $rokhdadyar_front );

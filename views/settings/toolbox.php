@@ -28,15 +28,58 @@ $chk_map   = (array) ( Pin::front()['map'] ?? array() );
 							<em><?php esc_html_e( 'مطلبی که تیک «پین» بخورد، در صفحهٔ دسته‌های سطح اول و دومِ خودش همیشه بالای فهرست می‌ماند و کنار عنوانش یک نشان می‌نشیند. مثلاً مطلبی در «مد › لاک ناخن › لاک ژله‌ای» در «مد» و «لاک ناخن» پین می‌شود.', 'rokhdadyar' ); ?></em>
 						</span>
 					</label>
-					<?php if ( $chk_pin['on'] ) : ?>
-						<span class="chk-badge is-style">
+				</header>
+
+				<?php if ( $chk_pin['on'] ) : ?>
+					<details class="chk-pins" <?php echo $chk_map ? 'open' : ''; ?>>
+						<summary>
 							<?php
 							/* translators: %d: number of pinned posts */
-							echo esc_html( sprintf( __( '%d مطلب پین است', 'rokhdadyar' ), count( $chk_map ) ) );
+							echo esc_html( sprintf( __( 'مطلب‌های پین‌شده: %d', 'rokhdadyar' ), count( $chk_map ) ) );
 							?>
-						</span>
-					<?php endif; ?>
-				</header>
+						</summary>
+						<?php if ( ! $chk_map ) : ?>
+							<p class="chk-hint"><?php esc_html_e( 'هنوز مطلبی پین نشده است. در ویرایشگرِ مطلب، در جعبهٔ «جعبه ابزار» تیک «پین در دسته‌بندی» را بزنید.', 'rokhdadyar' ); ?></p>
+						<?php else : ?>
+							<ul class="chk-pins__list">
+								<?php
+								uasort(
+									$chk_map,
+									static function ( $a, $b ) {
+										return (int) $b['t'] <=> (int) $a['t'];
+									}
+								);
+								foreach ( $chk_map as $chk_pid => $chk_row ) :
+									$chk_p = get_post( (int) $chk_pid );
+									if ( ! $chk_p ) {
+										continue;
+									}
+									$chk_cats = array();
+									foreach ( (array) $chk_row['c'] as $chk_t ) {
+										$chk_term = get_term( (int) $chk_t, 'category' );
+										if ( $chk_term && ! is_wp_error( $chk_term ) ) {
+											$chk_cats[] = '<a href="' . esc_url( get_term_link( $chk_term ) ) . '" target="_blank">' . esc_html( $chk_term->name ) . '</a>';
+										}
+									}
+									?>
+									<li>
+										<a class="chk-pins__title" href="<?php echo esc_url( get_permalink( $chk_p ) ); ?>" target="_blank"><?php echo esc_html( get_the_title( $chk_p ) ); ?></a>
+										<span class="chk-pins__meta">
+											<?php echo $chk_cats ? esc_html__( 'پین در:', 'rokhdadyar' ) . ' ' . implode( '، ', $chk_cats ) : esc_html__( 'دسته‌ای برای پین ندارد', 'rokhdadyar' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+											· <?php echo esc_html( wp_date( get_option( 'date_format' ), (int) $chk_row['t'] ) ); ?>
+										</span>
+										<span class="chk-pins__actions">
+											<?php if ( current_user_can( 'edit_post', $chk_p->ID ) ) : ?>
+												<a href="<?php echo esc_url( get_edit_post_link( $chk_p->ID ) ); ?>"><?php esc_html_e( 'ویرایش', 'rokhdadyar' ); ?></a>
+												<a class="chk-pins__unpin" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=rokhdadyar_unpin&post=' . $chk_p->ID ), 'rokhdadyar_unpin_' . $chk_p->ID ) ); ?>"><?php esc_html_e( 'برداشتن پین', 'rokhdadyar' ); ?></a>
+											<?php endif; ?>
+										</span>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endif; ?>
+					</details>
+				<?php endif; ?>
 
 				<div class="chk-grid chk-grid--4">
 					<label class="chk-field">

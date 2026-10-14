@@ -13,6 +13,7 @@ final class Admin {
 	public static function init(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_post_rokhdadyar_save', array( __CLASS__, 'save' ) );
+		add_action( 'admin_post_rokhdadyar_unpin', array( __CLASS__, 'unpin' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( ROKHDADYAR_FILE ), array( __CLASS__, 'action_links' ) );
 
 		// ستون فهرست نوشته‌ها: فقط روی edit.php و هنگام «ویرایش سریع».
@@ -87,6 +88,18 @@ final class Admin {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- در Settings::update پاک‌سازی می‌شود.
 		Settings::update( isset( $_POST['chk'] ) && is_array( $_POST['chk'] ) ? wp_unslash( $_POST['chk'] ) : array() );
 		wp_safe_redirect( add_query_arg( 'updated', '1', self::url() ) );
+		exit;
+	}
+
+	/** «برداشتن پین» از فهرست مطلب‌های پین‌شده در تب جعبه ابزار. */
+	public static function unpin(): void {
+		$id = (int) ( $_GET['post'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+		check_admin_referer( 'rokhdadyar_unpin_' . $id );
+		if ( ! $id || ! current_user_can( 'edit_post', $id ) ) {
+			wp_die( esc_html__( 'دسترسی ندارید.', 'rokhdadyar' ), 403 );
+		}
+		Pin::unpin( $id );
+		wp_safe_redirect( self::url() . '#toolbox' );
 		exit;
 	}
 

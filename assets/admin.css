@@ -348,6 +348,14 @@
 /* ---------- جعبه ابزار ---------- */
 .chk-tool__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-block-end: 12px; }
 .chk-tool input[type="color"] { width: 100%; height: 40px; padding: 2px; }
+.chk-pins { margin-block: 4px 14px; padding: 10px 12px; border: 1px solid var(--chk-line); border-radius: 6px; background: var(--chk-soft); }
+.chk-pins summary { cursor: pointer; font-weight: 600; }
+.chk-pins__list { margin: 8px 0 0; padding: 0; list-style: none; }
+.chk-pins__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; padding: 8px 0; border-block-start: 1px solid var(--chk-line); }
+.chk-pins__title { font-weight: 600; }
+.chk-pins__meta { color: var(--chk-muted); font-size: 12px; }
+.chk-pins__actions { display: inline-flex; gap: 10px; margin-inline-start: auto; font-size: 12px; }
+.chk-pins__unpin { color: var(--chk-bad); }
 .chk-tool__roles { margin-block: 14px 4px; }
 .chk-tool__label { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
 .chk-pin-preview { display: flex; align-items: center; gap: 6px; min-height: 40px; font-weight: 600; }
