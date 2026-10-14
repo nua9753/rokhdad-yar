@@ -57,8 +57,8 @@ $chk_map   = (array) ( Pin::front()['map'] ?? array() );
 					</div>
 				</div>
 
-				<div class="chk-field">
-					<span><?php esc_html_e( 'چه نقش‌هایی بتوانند پین کنند', 'rokhdadyar' ); ?></span>
+				<div class="chk-tool__roles">
+					<p class="chk-tool__label"><?php esc_html_e( 'چه نقش‌هایی بتوانند پین کنند', 'rokhdadyar' ); ?></p>
 					<div class="chk-checks">
 						<?php foreach ( $chk_rl as $chk_rs => $chk_rn ) : ?>
 							<label class="chk-check">

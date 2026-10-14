@@ -2,7 +2,7 @@
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 2.14.0
+Stable tag: 2.14.1
 License: GPL-2.0-or-later
 
 ساخت عنوان، چکیده و تصویر شاخص نوشته با هوش مصنوعی، با مرکز کنترل برای مدل‌ها، Base URL، کلید API و پرامپت‌ها.
@@ -36,6 +36,9 @@ License: GPL-2.0-or-later
 {content} {title} {excerpt} {categories} {tags} {keyword} {secondary} {examples} {count} {max_chars} {language} {site_name}
 
 == Changelog ==
+
+= 2.14.1 =
+* اصلاح ظاهر بخش «چه نقش‌هایی بتوانند پین کنند» در تب جعبه ابزار.
 
 = 2.14.0 =
 * به‌روزرسانی وردپرسی از گیت‌هاب: اعلان در پیشخوان، «نمایش جزئیات»، به‌روزرسانی با یک کلیک یا خودکار.
