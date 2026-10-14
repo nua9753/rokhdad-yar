@@ -327,6 +327,12 @@ final class Admin {
 						'cached'   => $i18n['cached'],
 						'secs'     => $i18n['secs'],
 						'error'    => $i18n['error'],
+						'near'     => $i18n['rwNear'],
+						'fresh'    => $i18n['rwFresh'],
+						'use'      => $i18n['rwUse'],
+						'shorter'  => $i18n['rwShorter'],
+						'longer'   => $i18n['rwLonger'],
+						'hint'     => $i18n['rwHint'],
 					),
 				)
 			);
@@ -502,6 +508,14 @@ final class Admin {
 				'rwGo'         => __( 'بازنویسی کن', 'rokhdadyar' ),
 				'rwCancel'     => __( 'انصراف', 'rokhdadyar' ),
 				'rwEdit'       => __( 'تغییر دستور', 'rokhdadyar' ),
+				'rwNear'       => __( 'نزدیک به متن', 'rokhdadyar' ),
+				'rwFresh'      => __( 'بیان تازه', 'rokhdadyar' ),
+				'rwUse'        => __( 'جایگزین کن', 'rokhdadyar' ),
+				/* translators: %s: percent */
+				'rwShorter'    => __( '%s٪ کوتاه‌تر', 'rokhdadyar' ),
+				/* translators: %s: percent */
+				'rwLonger'     => __( '%s٪ بلندتر', 'rokhdadyar' ),
+				'rwHint'       => __( 'روی نسخهٔ دلخواه بزنید یا کلید ۱ و ۲ را فشار دهید.', 'rokhdadyar' ),
 				'rwNoPara'     => __( 'اول نشانگر را داخل یک پاراگراف بگذارید (یا آن را انتخاب کنید).', 'rokhdadyar' ),
 				'rwSelect'     => __( 'اول متنِ پاراگراف را انتخاب کنید.', 'rokhdadyar' ),
 				'rwPickMode'   => __( 'متنِ انتخاب‌شده چطور بازنویسی شود؟', 'rokhdadyar' ),

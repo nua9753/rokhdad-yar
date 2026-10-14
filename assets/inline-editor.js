@@ -9,6 +9,7 @@
 	var h = wp.element.createElement;
 	var Fragment = wp.element.Fragment;
 	var useState = wp.element.useState;
+	var useEffect = wp.element.useEffect;
 	var RawHTML = wp.element.RawHTML;
 	var C = wp.components;
 	var BE = wp.blockEditor;
@@ -35,11 +36,76 @@
 		return ( d.textContent || '' ).trim().length;
 	}
 
+	function num( n ) {
+		return Number( n ).toLocaleString( document.documentElement.lang || undefined );
+	}
+
+	/* «۱۴۰ نویسه · ۴۲٪ کوتاه‌تر» */
+	function delta( len, base ) {
+		var out = t.chars.replace( '%s', num( len ) );
+		if ( base > 0 ) {
+			var d = Math.round( 100 * ( len - base ) / base );
+			if ( d !== 0 ) {
+				out += ' · ' + ( d < 0 ? t.shorter : t.longer ).replace( '%s', num( Math.abs( d ) ) );
+			}
+		}
+		return out;
+	}
+
+	function Skeleton( props ) {
+		return h( 'div', { className: 'chk-rw__wait', 'aria-live': 'polite' },
+			h( 'p', { className: 'chk-rw__busy' }, h( 'span', { className: 'chk-rw__pulse' } ), t.working, props.secs > 0 ? h( 'b', null, t.secs.replace( '%s', num( props.secs ) ) ) : null ),
+			[ 0, 1 ].map( function ( i ) {
+				return h( 'div', { key: i, className: 'chk-rw__skel' }, h( 'i' ), h( 'i' ), h( 'i' ) );
+			} )
+		);
+	}
+
 	function Rewriter( props ) {
 		var s = useState( null ); // { mode, status, items, msg, own, meta }
 		var st = s[ 0 ];
 		var set = s[ 1 ];
 		var html = asHTML( props.attributes.content );
+		var tick = useState( 0 );
+
+		// شمارندهٔ ثانیه در حین انتظار.
+		var busy = !! st && st.status === 'busy';
+		useEffect( function () {
+			if ( ! busy ) {
+				return undefined;
+			}
+			tick[ 1 ]( 0 );
+			var t0 = Date.now();
+			var id = setInterval( function () {
+				tick[ 1 ]( Math.floor( ( Date.now() - t0 ) / 1000 ) );
+			}, 500 );
+			return function () {
+				clearInterval( id );
+			};
+		}, [ busy ] );
+
+		// کلید ۱ و ۲ برای انتخاب سریع.
+		var ready = !! st && st.status === 'result' ? st.items : null;
+		useEffect( function () {
+			if ( ! ready ) {
+				return undefined;
+			}
+			function onKey( e ) {
+				var tag = ( e.target && e.target.tagName ) || '';
+				if ( tag === 'TEXTAREA' || tag === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey ) {
+					return;
+				}
+				var k = { '1': 0, '2': 1, '۱': 0, '۲': 1 }[ e.key ];
+				if ( k !== undefined && ready[ k ] ) {
+					e.preventDefault();
+					pick( ready[ k ] );
+				}
+			}
+			document.addEventListener( 'keydown', onKey, true );
+			return function () {
+				document.removeEventListener( 'keydown', onKey, true );
+			};
+		}, [ ready ] );
 
 		function ask( mode, own, fresh ) {
 			set( { mode: mode, status: 'busy', own: own || '' } );
@@ -58,7 +124,7 @@
 			} ).then( function ( res ) {
 				var src = res.source || {};
 				var u = src.usage;
-				var meta = [ src.model, res.cached ? t.cached : ( u && u.ms ? t.secs.replace( '%s', ( Math.round( u.ms / 100 ) / 10 ).toLocaleString() ) : '' ) ].filter( Boolean ).join( ' · ' );
+				var meta = [ src.model, res.cached ? t.cached : ( u && u.ms ? t.secs.replace( '%s', num( Math.round( u.ms / 100 ) / 10 ) ) : '' ) ].filter( Boolean ).join( ' · ' );
 				set( { mode: mode, status: 'result', items: res.items || [], own: own || '', meta: meta } );
 			} ).catch( function ( e ) {
 				set( { mode: mode, status: 'error', msg: ( e && e.message ) || t.error, own: own || '' } );
@@ -113,20 +179,21 @@
 					__nextHasNoMarginBottom: true,
 				} ) );
 			}
+			var base = plainLen( html );
+			body.push( h( 'details', { key: 'orig', className: 'chk-rw__orig' },
+				h( 'summary', null, t.current, h( 'span', null, t.chars.replace( '%s', num( base ) ) ) ),
+				h( RawHTML, { className: 'chk-rw__text' }, html )
+			) );
 			if ( st.status === 'busy' ) {
-				body.push( h( 'p', { key: 'busy', className: 'chk-rw__busy' }, h( C.Spinner ), ' ', t.working ) );
+				body.push( h( Skeleton, { key: 'busy', secs: tick[ 0 ] } ) );
 			}
 			if ( st.status === 'error' ) {
 				body.push( h( C.Notice, { key: 'err', status: 'error', isDismissible: false }, st.msg ) );
 			}
 			if ( st.status === 'result' ) {
-				body.push( h( 'p', { key: 'meta', className: 'chk-rw__meta' }, st.meta ) );
-				body.push( h( 'div', { key: 'orig', className: 'chk-rw__orig' },
-					h( 'span', { className: 'chk-rw__tag' }, t.current + ' · ' + t.chars.replace( '%s', plainLen( html ).toLocaleString() ) ),
-					h( RawHTML, { className: 'chk-rw__text' }, html )
-				) );
-				st.items.forEach( function ( it, i ) {
-					body.push( h( 'button', {
+				body.push( h( 'p', { key: 'hint', className: 'chk-rw__hint' }, t.hint ) );
+				body.push( h( 'div', { key: 'opts', className: 'chk-rw__opts' }, st.items.map( function ( it, i ) {
+					return h( 'button', {
 						key: 'i' + i,
 						type: 'button',
 						className: 'chk-rw__opt',
@@ -134,10 +201,15 @@
 							pick( it );
 						},
 					},
-					h( 'span', { className: 'chk-rw__tag' }, t.option.replace( '%s', ( i + 1 ).toLocaleString() ) + ' · ' + t.chars.replace( '%s', plainLen( it ).toLocaleString() ) ),
+					h( 'span', { className: 'chk-rw__opthead' },
+						h( 'span', { className: 'chk-rw__num' }, num( i + 1 ) ),
+						h( 'span', { className: 'chk-rw__kind' }, st.items.length > 1 ? ( i ? t.fresh : t.near ) : t.option.replace( /\s*[—-].*$/, '' ).replace( '%s', num( 1 ) ) ),
+						h( 'span', { className: 'chk-rw__delta' }, delta( plainLen( it ), base ) ),
+						h( 'span', { className: 'chk-rw__use' }, t.use )
+					),
 					h( RawHTML, { className: 'chk-rw__text' }, it )
-					) );
-				} );
+					);
+				} ) ) );
 			}
 			var actions = [];
 			if ( st.mode === 'own' && st.status !== 'busy' ) {
@@ -158,6 +230,9 @@
 					},
 				}, t.retry ) );
 			}
+			if ( st.status === 'result' && st.meta ) {
+				actions.push( h( 'span', { key: 'meta', className: 'chk-rw__meta' }, st.meta ) );
+			}
 			actions.push( h( C.Button, {
 				key: 'cancel',
 				variant: 'tertiary',
@@ -175,7 +250,8 @@
 					}
 				},
 				shouldCloseOnClickOutside: false,
-				className: 'chk-rw',
+				className: 'chk-rw is-' + st.status,
+				overlayClassName: 'chk-rw-overlay',
 			}, body );
 		}
 

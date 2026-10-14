@@ -71,6 +71,106 @@ final class Client {
 		return $text;
 	}
 
+	/** @var array|null درخواست‌های جمع‌شده در حالت موازی. */
+	private static $collect = null;
+
+	/** @var array|\WP_Error|null پاسخ آماده برای پردازش در حالت موازی. */
+	private static $replay = null;
+
+	/**
+	 * چند پیام به یک مدل، هم‌زمان (نه پشت سر هم): زمان انتظار برابر کندترین پاسخ است، نه جمع همه.
+	 * اگر یکی خطا داد، همان یکی با complete() معمولی (با تلاش‌های جایگزینش) دوباره فرستاده می‌شود.
+	 *
+	 * @return array نتیجهٔ هر پیام (متن یا WP_Error) به همان ترتیب
+	 */
+	public static function complete_many( array $profile, string $system, array $users ): array {
+		$key = Settings::decrypt( (string) ( $profile['api_key'] ?? '' ) );
+		if ( '' === $key || '' === (string) ( $profile['model'] ?? '' ) || count( $users ) < 2 || Settings::key_lost( (string) ( $profile['api_key'] ?? '' ) ) ) {
+			return array_map(
+				static function ( $u ) use ( $profile, $system ) {
+					return self::complete( $profile, $system, $u );
+				},
+				$users
+			);
+		}
+		$method       = 'call_' . $profile['format'];
+		self::$prefix = '';
+		self::$collect = array();
+		foreach ( $users as $u ) {
+			self::$method( $profile, $key, $system, $u, true );
+		}
+		$reqs          = self::$collect;
+		self::$collect = null;
+
+		$started = microtime( true );
+		$batch   = array();
+		foreach ( $reqs as $i => $r ) {
+			$opt = array(
+				'timeout'         => (float) $r[1]['timeout'],
+				'connect_timeout' => 10,
+				'verify'          => ABSPATH . WPINC . '/certificates/ca-bundle.crt',
+				'redirects'       => 2,
+			);
+			if ( defined( 'WP_PROXY_HOST' ) && defined( 'WP_PROXY_PORT' ) ) {
+				$opt['proxy'] = WP_PROXY_HOST . ':' . WP_PROXY_PORT;
+			}
+			$batch[ $i ] = array(
+				'url'     => $r[0],
+				'headers' => $r[1]['headers'],
+				'data'    => $r[1]['body'] ?? null,
+				'type'    => 'POST',
+				'options' => $opt,
+			);
+		}
+		$class = class_exists( '\WpOrg\Requests\Requests' ) ? '\WpOrg\Requests\Requests' : ( class_exists( '\Requests' ) ? '\Requests' : '' );
+		$resps = array();
+		if ( $class ) {
+			try {
+				$resps = $class::request_multiple( $batch );
+			} catch ( \Throwable $e ) {
+				$resps = array();
+			}
+		}
+		$ms  = (int) round( 1000 * ( microtime( true ) - $started ) );
+		$out = array();
+		$sum = array(
+			'in'     => 0,
+			'out'    => 0,
+			'cached' => 0,
+			'ms'     => $ms,
+		);
+		foreach ( $users as $i => $u ) {
+			$r = $resps[ $i ] ?? null;
+			if ( $r && is_object( $r ) && isset( $r->status_code ) && ! ( $r instanceof \Exception ) ) {
+				self::$replay = array(
+					'headers'  => array(),
+					'body'     => (string) $r->body,
+					'response' => array(
+						'code'    => (int) $r->status_code,
+						'message' => '',
+					),
+				);
+				self::$usage  = null;
+				$text         = self::$method( $profile, $key, $system, $u, true );
+				self::$replay = null;
+			} else {
+				$text = new \WP_Error( 'chk_http', 'parallel' );
+			}
+			if ( is_wp_error( $text ) ) {
+				$text = self::complete( $profile, $system, $u ); // دوباره، تکی و با همهٔ تلاش‌های جایگزین.
+			} else {
+				$text = trim( (string) preg_replace( '#<think(?:ing)?>.*?</think(?:ing)?>#is', '', $text ) );
+				Usage::add( (string) ( ! empty( $profile['label'] ) ? $profile['label'] : $profile['model'] ), self::$usage );
+			}
+			foreach ( array( 'in', 'out', 'cached' ) as $k ) {
+				$sum[ $k ] += (int) ( self::$usage[ $k ] ?? 0 );
+			}
+			$out[ $i ] = $text;
+		}
+		self::$usage = $sum;
+		return $out;
+	}
+
 	/** @var string فقط برای Anthropic: بلوک قابل‌کش. */
 	private static $prefix = '';
 
@@ -275,7 +375,17 @@ final class Client {
 			$args['body']        = wp_json_encode( $body );
 			$args['data_format'] = 'body';
 		}
-		$res = wp_remote_request( $url, $args );
+		// حالت موازی (complete_many): مرحلهٔ اول فقط درخواست جمع می‌شود، مرحلهٔ دوم پاسخِ آماده پردازش می‌شود.
+		if ( is_array( self::$collect ) ) {
+			self::$collect[] = array( $url, $args );
+			return new \WP_Error( 'chk_collect', 'collect' );
+		}
+		if ( null !== self::$replay ) {
+			$res          = self::$replay;
+			self::$replay = null;
+		} else {
+			$res = wp_remote_request( $url, $args );
+		}
 		if ( is_wp_error( $res ) ) {
 			return new \WP_Error(
 				'chk_http',

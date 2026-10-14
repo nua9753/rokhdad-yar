@@ -31,7 +31,10 @@ final class Rewrite {
 		);
 	}
 
-	public static function prompt( string $mode, string $html, string $title, string $own ): string {
+	/**
+	 * @param int $variant ۰ = هر دو نسخه در یک پاسخ؛ ۱ = فقط نسخهٔ نزدیک به متن؛ ۲ = فقط نسخهٔ با بیان تازه‌تر.
+	 */
+	public static function prompt( string $mode, string $html, string $title, string $own, int $variant = 0 ): string {
 		$len = mb_strlen( wp_strip_all_tags( $html ), 'UTF-8' );
 		switch ( $mode ) {
 			case 'short':
@@ -47,9 +50,19 @@ final class Rewrite {
 			. "- به همان زبان و لحن پاراگراف؛ روان، طبیعی و سئوپسند\n"
 			. "- لینک‌ها (<a href=\"…\">) را با همان نشانی نگه دار و روی متنِ معادل بگذار؛ پررنگ و کج‌ها هم بمانند\n"
 			. "- هیچ برچسب HTML دیگری اضافه نکن؛ تیتر، فهرست یا پاراگراف جدید نساز\n"
-			. "- دو نسخهٔ متفاوت بنویس و بینشان فقط یک خط با === بگذار؛ بدون شماره، عنوان یا توضیح\n"
+			. self::shape( $variant )
 			. ( '' !== $title ? "\nعنوان نوشته (فقط برای فهم موضوع): " . $title . "\n" : '' )
 			. "\nپاراگراف:\n\"\"\"\n" . $html . "\n\"\"\"";
+	}
+
+	private static function shape( int $variant ): string {
+		if ( 1 === $variant ) {
+			return "- فقط یک نسخه بنویس، نزدیک به ساختار و واژه‌های خودِ پاراگراف؛ بدون عنوان یا توضیح\n";
+		}
+		if ( 2 === $variant ) {
+			return "- فقط یک نسخه بنویس، با جمله‌بندی و ترتیبِ تازه‌تر و گیراتر از متن اصلی؛ بدون عنوان یا توضیح\n";
+		}
+		return "- دو نسخهٔ متفاوت بنویس و بینشان فقط یک خط با === بگذار؛ بدون شماره، عنوان یا توضیح\n";
 	}
 
 	/** خروجی مدل ← دو نسخهٔ تمیز. */
@@ -102,8 +115,8 @@ final class Rewrite {
 			return new \WP_Error( 'chk_no_profile', __( 'هنوز هیچ مدلی در مرکز کنترل تعریف نشده است.', 'rokhdadyar' ), array( 'status' => 400 ) );
 		}
 		$title  = '' !== $title ? $title : (string) $post->post_title;
-		$prompt = self::prompt( $mode, $html, $title, $own );
-		$key    = 'chk_r' . md5( ( $profile['id'] ?? '' ) . '|' . ( $profile['model'] ?? '' ) . '|' . $prompt );
+		$system = 'تو ویراستار حرفه‌ای یک رسانهٔ آنلاین هستی. فقط خروجی نهایی را بنویس.';
+		$key    = 'chk_r' . md5( ( $profile['id'] ?? '' ) . '|' . ( $profile['model'] ?? '' ) . '|2|' . self::prompt( $mode, $html, $title, $own ) );
 		$cached = false;
 		$raw    = $fresh ? false : get_transient( $key );
 		if ( is_string( $raw ) ) {
@@ -114,13 +127,34 @@ final class Rewrite {
 				return $gate;
 			}
 			try {
-				$raw = Client::complete( $profile, 'تو ویراستار حرفه‌ای یک رسانهٔ آنلاین هستی. فقط خروجی نهایی را بنویس.', $prompt );
+				// دو نسخه هم‌زمان و هر کدام در یک درخواستِ کوتاه‌تر: انتظار برابر یک پاسخِ تک‌نسخه‌ای است، نه دوتایی.
+				$outs = Client::complete_many(
+					$profile,
+					$system,
+					array(
+						self::prompt( $mode, $html, $title, $own, 1 ),
+						self::prompt( $mode, $html, $title, $own, 2 ),
+					)
+				);
 			} finally {
 				Gate::leave();
 			}
-			if ( is_wp_error( $raw ) ) {
-				return $raw;
+			$got = array();
+			$err = null;
+			foreach ( $outs as $o ) {
+				if ( is_wp_error( $o ) ) {
+					$err = $o;
+					continue;
+				}
+				$one = self::parse( (string) $o );
+				if ( $one ) {
+					$got[] = $one[0];
+				}
 			}
+			if ( ! $got ) {
+				return $err ? $err : new \WP_Error( 'chk_empty', __( 'مدل پاسخ قابل‌استفاده‌ای برنگرداند؛ دوباره امتحان کنید.', 'rokhdadyar' ), array( 'status' => 502 ) );
+			}
+			$raw = implode( "\n===\n", array_unique( $got ) );
 		}
 		$items = self::parse( (string) $raw );
 		if ( ! $items ) {

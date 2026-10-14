@@ -25,9 +25,55 @@
 		return ( d.textContent || '' ).trim().length;
 	}
 
+	function num( n ) {
+		return Number( n ).toLocaleString( document.documentElement.lang || undefined );
+	}
+
+	function delta( len, base ) {
+		var out = t.rwChars.replace( '%s', num( len ) );
+		if ( base > 0 ) {
+			var d = Math.round( 100 * ( len - base ) / base );
+			if ( d !== 0 ) {
+				out += ' · ' + ( d < 0 ? t.rwShorter : t.rwLonger ).replace( '%s', num( Math.abs( d ) ) );
+			}
+		}
+		return out;
+	}
+
+	/* «پاراگراف فعلی» جمع‌شده، تا جای نسخه‌ها را نگیرد. */
+	function original( html ) {
+		var d = el( 'details', 'chk-rw__orig' );
+		var sm = el( 'summary', '', t.rwCurrent );
+		sm.appendChild( el( 'span', '', t.rwChars.replace( '%s', num( plainLen( html ) ) ) ) );
+		d.appendChild( sm );
+		var tx = el( 'div', 'chk-rw__text' );
+		tx.innerHTML = html;
+		d.appendChild( tx );
+		return d;
+	}
+
+	var picks = [];
+	function pickKey( e ) {
+		var tag = ( e.target && e.target.tagName ) || '';
+		if ( tag === 'TEXTAREA' || tag === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey ) {
+			return;
+		}
+		var k = { '1': 0, '2': 1, '۱': 0, '۲': 1 }[ e.key ];
+		if ( k !== undefined && picks[ k ] ) {
+			e.preventDefault();
+			e.stopPropagation();
+			picks[ k ]();
+		}
+	}
+
 	/* پنجره: ساده و مستقل از پوسته؛ کلیک بیرون آن را نمی‌بندد. */
 	var wrap = null;
 	function close() {
+		if ( timer ) {
+			clearInterval( timer );
+			timer = null;
+		}
+		document.removeEventListener( 'keydown', pickKey, true );
 		if ( wrap ) {
 			wrap.remove();
 			wrap = null;
@@ -44,7 +90,13 @@
 			close();
 		}
 	}
+	var timer = null;
 	function open( title ) {
+		if ( timer ) {
+			clearInterval( timer );
+			timer = null;
+		}
+		document.removeEventListener( 'keydown', pickKey, true );
 		if ( wrap ) {
 			wrap.remove();
 		}
@@ -54,8 +106,17 @@
 		var box = el( 'div', 'chk-guard__box chk-rwc__box' );
 		box.dir = document.documentElement.dir || 'rtl';
 		var head = el( 'div', 'chk-rwc__head' );
-		head.appendChild( el( 'h2', 'chk-rwc__title', title ) );
-		var x = el( 'button', 'chk-pop__close', '×' );
+		var h2 = el( 'h2', 'chk-rwc__title' );
+		if ( cfg.mark ) {
+			var mk = el( 'img', 'chk-rwc__mark' );
+			mk.src = cfg.mark;
+			mk.alt = '';
+			h2.appendChild( mk );
+		}
+		h2.appendChild( document.createTextNode( title ) );
+		head.appendChild( h2 );
+		var x = el( 'button', 'chk-rwc__close' );
+		x.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z"/></svg>';
 		x.type = 'button';
 		x.setAttribute( 'aria-label', t.close || '×' );
 		x.addEventListener( 'click', function () {
@@ -67,7 +128,7 @@
 		box.appendChild( head );
 		var body = el( 'div', 'chk-rwc__body' );
 		box.appendChild( body );
-		var foot = el( 'div', 'chk-guard__foot' );
+		var foot = el( 'div', 'chk-guard__foot chk-rwc__foot' );
 		box.appendChild( foot );
 		wrap.appendChild( box );
 		wrap.addEventListener( 'click', function ( e ) {
@@ -115,6 +176,7 @@
 		ta.value = value || '';
 		lab.appendChild( ta );
 		ui.body.appendChild( lab );
+		ui.body.appendChild( original( node.html ) );
 		var go = function () {
 			if ( ta.value.trim() ) {
 				request( node, 'own', ta.value.trim(), true );
@@ -137,7 +199,26 @@
 		var html = node.html;
 		var ui = open( titleOf( mode ) );
 		wrap.classList.add( 'is-busy' );
-		ui.body.appendChild( el( 'p', 'chk-rw__busy', t.working ) );
+		ui.body.appendChild( original( html ) );
+		var wait = el( 'div', 'chk-rw__wait' );
+		wait.setAttribute( 'aria-live', 'polite' );
+		var line = el( 'p', 'chk-rw__busy' );
+		line.appendChild( el( 'span', 'chk-rw__pulse' ) );
+		line.appendChild( document.createTextNode( t.working ) );
+		var secs = el( 'b' );
+		line.appendChild( secs );
+		wait.appendChild( line );
+		[ 0, 1 ].forEach( function () {
+			var sk = el( 'div', 'chk-rw__skel' );
+			sk.innerHTML = '<i></i><i></i><i></i>';
+			wait.appendChild( sk );
+		} );
+		ui.body.appendChild( wait );
+		var t0 = Date.now();
+		timer = setInterval( function () {
+			var n = Math.floor( ( Date.now() - t0 ) / 1000 );
+			secs.textContent = n > 0 ? t.secs.replace( '%s', num( n ) ) : '';
+		}, 500 );
 		var title = document.getElementById( 'title' );
 		var idEl = document.getElementById( 'post_ID' );
 		fetch( cfg.root + 'rewrite', {
@@ -170,26 +251,35 @@
 		var ui = open( titleOf( mode ) );
 		var src = res.source || {};
 		var u = src.usage;
-		ui.body.appendChild( el( 'p', 'chk-rw__meta', [ src.model, res.cached ? t.cached : ( u && u.ms ? t.secs.replace( '%s', ( Math.round( u.ms / 100 ) / 10 ).toLocaleString() ) : '' ) ].filter( Boolean ).join( ' · ' ) ) );
-		var orig = el( 'div', 'chk-rw__orig' );
-		orig.appendChild( el( 'span', 'chk-rw__tag', t.rwCurrent + ' · ' + t.rwChars.replace( '%s', plainLen( html ).toLocaleString() ) ) );
-		var ot = el( 'div', 'chk-rw__text' );
-		ot.innerHTML = html;
-		orig.appendChild( ot );
-		ui.body.appendChild( orig );
-		( res.items || [] ).forEach( function ( it, i ) {
+		var meta = [ src.model, res.cached ? t.cached : ( u && u.ms ? t.secs.replace( '%s', num( Math.round( u.ms / 100 ) / 10 ) ) : '' ) ].filter( Boolean ).join( ' · ' );
+		ui.body.appendChild( original( html ) );
+		var base = plainLen( html );
+		var items = res.items || [];
+		ui.body.appendChild( el( 'p', 'chk-rw__hint', t.rwHint ) );
+		var list = el( 'div', 'chk-rw__opts' );
+		picks = [];
+		items.forEach( function ( it, i ) {
 			var b = el( 'button', 'chk-rw__opt' );
 			b.type = 'button';
-			b.appendChild( el( 'span', 'chk-rw__tag', t.rwOption.replace( '%s', ( i + 1 ).toLocaleString() ) + ' · ' + t.rwChars.replace( '%s', plainLen( it ).toLocaleString() ) ) );
+			var hd = el( 'span', 'chk-rw__opthead' );
+			hd.appendChild( el( 'span', 'chk-rw__num', num( i + 1 ) ) );
+			hd.appendChild( el( 'span', 'chk-rw__kind', items.length > 1 ? ( i ? t.rwFresh : t.rwNear ) : t.rwNear ) );
+			hd.appendChild( el( 'span', 'chk-rw__delta', delta( plainLen( it ), base ) ) );
+			hd.appendChild( el( 'span', 'chk-rw__use', t.rwUse ) );
+			b.appendChild( hd );
 			var tx = el( 'div', 'chk-rw__text' );
 			tx.innerHTML = it; // از سرور با wp_kses پاک‌سازی شده است.
 			b.appendChild( tx );
-			b.addEventListener( 'click', function () {
+			var go = function () {
 				node.replace( it );
 				close();
-			} );
-			ui.body.appendChild( b );
+			};
+			picks.push( go );
+			b.addEventListener( 'click', go );
+			list.appendChild( b );
 		} );
+		ui.body.appendChild( list );
+		document.addEventListener( 'keydown', pickKey, true );
 		if ( mode === 'own' ) {
 			ui.foot.appendChild( button( t.rwEdit, '', function () {
 				askOwn( node, own );
@@ -199,6 +289,9 @@
 			request( node, mode, own, true );
 		} ) );
 		ui.foot.appendChild( button( t.rwCancel, '', close ) );
+		if ( meta ) {
+			ui.foot.appendChild( el( 'span', 'chk-rw__meta', meta ) );
+		}
 	}
 
 
