@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
 final class Made {
 
 	const META  = '_rokhdadyar_made';
-	const TASKS = array( 'title', 'excerpt', 'slug', 'terms', 'image' );
+	const TASKS = array( 'title', 'excerpt', 'slug', 'terms', 'image', 'links' );
 
 	/** @return string[] */
 	public static function get( int $post_id ): array {

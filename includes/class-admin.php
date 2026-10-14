@@ -14,6 +14,7 @@ final class Admin {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_post_rokhdadyar_save', array( __CLASS__, 'save' ) );
 		add_action( 'admin_post_rokhdadyar_unpin', array( __CLASS__, 'unpin' ) );
+		add_action( 'admin_post_rokhdadyar_unimportant', array( __CLASS__, 'unimportant' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( ROKHDADYAR_FILE ), array( __CLASS__, 'action_links' ) );
 
 		// ستون فهرست نوشته‌ها: فقط روی edit.php و هنگام «ویرایش سریع».
@@ -103,6 +104,17 @@ final class Admin {
 		exit;
 	}
 
+	public static function unimportant(): void {
+		$id = (int) ( $_GET['post'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+		check_admin_referer( 'rokhdadyar_unimportant_' . $id );
+		if ( ! $id || ! current_user_can( 'edit_post', $id ) ) {
+			wp_die( esc_html__( 'دسترسی ندارید.', 'rokhdadyar' ), 403 );
+		}
+		Links::mark( $id, false );
+		wp_safe_redirect( self::url() . '#toolbox' );
+		exit;
+	}
+
 	/* ---------- فهرست نوشته‌ها ---------- */
 
 	public static function list_hooks(): void {
@@ -153,6 +165,9 @@ final class Admin {
 		if ( $text && Terms::enabled( $post->post_type ) ) {
 			self::button( 'terms', $post_id, __( 'پیشنهاد دسته و برچسب با هوش مصنوعی', 'rokhdadyar' ), '#' );
 		}
+		if ( $text && Toolbox::links_on() ) {
+			self::button( 'links', $post_id, __( 'پیشنهاد لینک داخلی به مطالب مهم', 'rokhdadyar' ), '' );
+		}
 		self::image_button( $post );
 		// دکمهٔ تاریخچه همیشه هست، ولی تا وقتی چیزی برای برگرداندن نباشد پنهان می‌ماند.
 		if ( $text ) {
@@ -188,7 +203,7 @@ final class Admin {
 			esc_attr( $task ),
 			(int) $post_id,
 			esc_attr( $label ),
-			'image' === $task ? '<svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.2" cy="6" r="1.2" fill="currentColor"/><path d="M2 12l3.5-3.5 2.5 2.5 2.5-3L14 11.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>' : esc_html( $glyph ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			'links' === $task ? '<svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><path d="M6.6 9.4a2.6 2.6 0 0 0 3.7 0l2.2-2.2a2.6 2.6 0 0 0-3.7-3.7l-.9.9M9.4 6.6a2.6 2.6 0 0 0-3.7 0L3.5 8.8a2.6 2.6 0 0 0 3.7 3.7l.9-.9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' : ( 'image' === $task ? '<svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.2" cy="6" r="1.2" fill="currentColor"/><path d="M2 12l3.5-3.5 2.5 2.5 2.5-3L14 11.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>' : esc_html( $glyph ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_attr( $extra ),
 			self::icon(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG ثابت.
 			'' !== $text ? '<span class="chk-btn__text">' . esc_html( $text ) . '</span>' : '',
@@ -242,6 +257,9 @@ final class Admin {
 		if ( Access::can( 'text' ) && Terms::enabled( $screen->post_type ) ) {
 			wp_enqueue_script( 'rokhdadyar-admin-terms', $url . 'admin-terms.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
 		}
+		if ( Access::can( 'text' ) && Toolbox::links_on() ) {
+			wp_enqueue_script( 'rokhdadyar-admin-links', $url . 'admin-links.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
+		}
 	}
 
 	/** محافظ نامک: مستقل از دسترسی به ابزارهای افزونه، برای هر کسی که نوشته را ویرایش می‌کند. */
@@ -259,16 +277,31 @@ final class Admin {
 
 	public static function block_assets(): void {
 		$screen = get_current_screen();
-		if ( $screen && Toolbox::can( 'pin' ) && in_array( $screen->post_type, Toolbox::pin_types(), true ) ) {
+		$tb_pin = $screen && Toolbox::can( 'pin' ) && in_array( $screen->post_type, Toolbox::pin_types(), true );
+		$tb_imp = $screen && Toolbox::can( 'important' ) && in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true );
+		if ( $tb_pin || $tb_imp ) {
 			wp_enqueue_script( 'rokhdadyar-toolbox', plugin_dir_url( ROKHDADYAR_FILE ) . 'assets/toolbox-editor.js', array( 'wp-plugins', 'wp-element', 'wp-components', 'wp-data', 'wp-editor' ), ROKHDADYAR_VER, true );
 			wp_localize_script(
 				'rokhdadyar-toolbox',
 				'RokhdadyarToolbox',
 				array(
-					'meta'  => Pin::META,
+					'tools' => array_values(
+						array_filter(
+							array(
+								$tb_pin ? array(
+									'meta'  => Pin::META,
+									'label' => __( 'پین در دسته‌بندی', 'rokhdadyar' ),
+									'help'  => __( 'این مطلب در بالای دسته‌های سطح اول و دومِ خودش می‌ماند و نشان «مطلب مهم» می‌گیرد. فقط برای مطلب منتشرشده.', 'rokhdadyar' ),
+								) : null,
+								$tb_imp ? array(
+									'meta'  => Links::META,
+									'label' => __( 'مطلب مهم', 'rokhdadyar' ),
+									'help'  => __( 'لینک‌های داخلیِ پیشنهادی هوش مصنوعی فقط به مطالب مهم داده می‌شوند.', 'rokhdadyar' ),
+								) : null,
+							)
+						)
+					),
 					'title' => __( 'جعبه ابزار', 'rokhdadyar' ),
-					'pin'   => __( 'پین در دسته‌بندی', 'rokhdadyar' ),
-					'help'  => __( 'این مطلب در بالای دسته‌های سطح اول و دومِ خودش می‌ماند و نشان «مطلب مهم» می‌گیرد. فقط برای مطلب منتشرشده.', 'rokhdadyar' ),
 				)
 			);
 		}
@@ -282,18 +315,20 @@ final class Admin {
 		wp_enqueue_script(
 			'rokhdadyar-editor',
 			plugin_dir_url( ROKHDADYAR_FILE ) . 'assets/editor.js',
-			array( 'wp-plugins', 'wp-element', 'wp-components', 'wp-data', 'wp-api-fetch', 'wp-editor', 'wp-edit-post' ),
+			array( 'wp-plugins', 'wp-element', 'wp-components', 'wp-data', 'wp-api-fetch', 'wp-editor', 'wp-edit-post', 'wp-blocks' ),
 			ROKHDADYAR_VER,
 			true
 		);
 		$cfg                   = self::config();
 		$cfg['supportsExcerpt'] = post_type_supports( $screen->post_type, 'excerpt' );
 		$cfg['terms']           = array_keys( Terms::enabled( $screen->post_type ) );
+		$cfg['links']           = Toolbox::links_on();
 		$cfg['image']           = Image::ready() && Access::can( 'image' ) && post_type_supports( $screen->post_type, 'thumbnail' ) && current_user_can( 'upload_files' );
 		if ( ! Access::can( 'text' ) ) {
 			// این نقش فقط تصویر می‌سازد: ابزارهای متنی و تاریخچه در پنل نمی‌آیند.
 			$cfg['ready']   = false;
 			$cfg['terms']   = array();
+			$cfg['links']   = false;
 			$cfg['history'] = false;
 		}
 		$cfg['keyword']         = get_post() ? Extractor::keywords( get_post()->ID ) : '';
@@ -391,6 +426,13 @@ final class Admin {
 				'slug'         => __( 'نامک پیشنهادی', 'rokhdadyar' ),
 				'makeSlug'     => __( 'ساخت نامک', 'rokhdadyar' ),
 				'terms'        => __( 'دسته و برچسب پیشنهادی', 'rokhdadyar' ),
+				'links'        => __( 'لینک داخلی به مطالب مهم', 'rokhdadyar' ),
+				'lPick'        => __( 'این عبارت‌ها در متن به مطالب مهم لینک می‌شوند؛ هر کدام را نمی‌خواهید بردارید.', 'rokhdadyar' ),
+				'lNone'        => __( 'هیچ‌کدام از مطالب مهم به این متن مربوط نبود.', 'rokhdadyar' ),
+				'lApply'       => __( 'ثبت لینک‌ها', 'rokhdadyar' ),
+				/* translators: 1: sent, 2: total important posts */
+				'lSent'        => __( '%1$s از %2$s مطلب مهم بررسی شد', 'rokhdadyar' ),
+				'makeLinks'    => __( 'پیشنهاد لینک داخلی', 'rokhdadyar' ),
 				'makeTerms'    => __( 'پیشنهاد دسته و برچسب', 'rokhdadyar' ),
 				'cats'         => __( 'دسته‌ها', 'rokhdadyar' ),
 				'tags'         => __( 'برچسب‌ها', 'rokhdadyar' ),
@@ -460,6 +502,9 @@ final class Admin {
 				}
 				if ( $text && Terms::enabled( $post->post_type ) ) {
 					self::button( 'terms', $post->ID, __( 'پیشنهاد دسته و برچسب با هوش مصنوعی', 'rokhdadyar' ), '#', ' chk-btn--wide', __( 'دسته و برچسب', 'rokhdadyar' ) );
+				}
+				if ( $text && Toolbox::links_on() ) {
+					self::button( 'links', $post->ID, __( 'پیشنهاد لینک داخلی به مطالب مهم', 'rokhdadyar' ), '', ' chk-btn--wide', __( 'لینک داخلی', 'rokhdadyar' ) );
 				}
 				self::image_button( $post, ' chk-btn--wide', __( 'ساخت تصویر شاخص', 'rokhdadyar' ) );
 				if ( $text ) {

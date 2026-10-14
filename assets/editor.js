@@ -307,6 +307,132 @@
 		return h( 'div', { className: 'chk-ed__task' }, out );
 	}
 
+	/* لینک داخلی به مطالب مهم: پیشنهاد، انتخاب و درج در خودِ بلوک‌ها (با ذخیرهٔ نوشته ثبت می‌شود). */
+	function linkify( html, anchor, url ) {
+		var parts = html.split( /(<!--[\s\S]*?-->|<[^>]+>)/ );
+		var skip = 0;
+		var ok = false;
+		var open = /^<(a|h[1-6]|code|pre|figcaption|button|script|style)[\s>]/i;
+		var shut = /^<\/(a|h[1-6]|code|pre|figcaption|button|script|style)>/i;
+		for ( var i = 0; i < parts.length; i++ ) {
+			var s = parts[ i ];
+			if ( ! s ) {
+				continue;
+			}
+			if ( s.charAt( 0 ) === '<' ) {
+				if ( open.test( s ) ) {
+					skip++;
+				} else if ( shut.test( s ) ) {
+					skip = Math.max( 0, skip - 1 );
+				}
+				continue;
+			}
+			if ( ok || skip ) {
+				continue;
+			}
+			var pos = s.indexOf( anchor );
+			if ( pos > -1 ) {
+				parts[ i ] = s.slice( 0, pos ) + '<a href="' + String( url ).replace( /"/g, '&quot;' ) + '">' + anchor + '</a>' + s.slice( pos + anchor.length );
+				ok = true;
+			}
+		}
+		return { html: parts.join( '' ), ok: ok };
+	}
+
+	function LinksTask() {
+		var made = useMade( 'links' );
+		var s = useState( { status: 'idle' } );
+		var st = s[ 0 ];
+		var set = s[ 1 ];
+		var o = useState( {} );
+		var off = o[ 0 ];
+		var setOff = o[ 1 ];
+		var busy = st.status === 'busy';
+
+		function run() {
+			var fresh = st.status === 'result';
+			set( { status: 'busy' } );
+			wp.apiFetch( {
+				path: '/rokhdadyar/v1/links',
+				method: 'POST',
+				data: {
+					post_id: editor().getCurrentPostId(),
+					fresh: fresh,
+					content: editor().getEditedPostContent(),
+					title: editor().getEditedPostAttribute( 'title' ) || '',
+				},
+			} ).then( function ( res ) {
+				made.mark();
+				setOff( {} );
+				set( { status: 'result', res: res } );
+			} ).catch( function ( e ) {
+				set( { status: 'error', msg: ( e && e.message ) || t.error } );
+			} );
+		}
+		function apply() {
+			var html = editor().getEditedPostContent();
+			var n = 0;
+			st.res.items.forEach( function ( it, i ) {
+				if ( ! off[ i ] ) {
+					var r = linkify( html, it.anchor, it.url );
+					html = r.html;
+					n += r.ok ? 1 : 0;
+				}
+			} );
+			if ( n ) {
+				wp.data.dispatch( 'core/block-editor' ).resetBlocks( wp.blocks.parse( html ) );
+			}
+			set( { status: 'done' } );
+		}
+
+		var out = [
+			h( C.Button, {
+				key: 'go',
+				variant: 'secondary',
+				className: made.cls,
+				title: made.title,
+				icon: spark,
+				isBusy: busy,
+				disabled: busy,
+				onClick: run,
+			}, busy ? t.working : ( st.status === 'result' ? t.retry : t.makeLinks ) ),
+		];
+		if ( st.status === 'done' ) {
+			out.push( h( 'span', { key: 'ok', className: 'chk-ed__ok' }, '✓ ' + t.saved ) );
+		}
+		if ( st.status === 'error' ) {
+			out.push( h( C.Notice, { key: 'err', status: 'error', isDismissible: false }, st.msg ) );
+		}
+		if ( st.status === 'result' ) {
+			var src = st.res.source || {};
+			var items = st.res.items || [];
+			out.push( h( 'p', { key: 'meta', className: 'chk-ed__meta' },
+				[ src.model, src.total ? t.lSent.replace( '%1$s', src.sent ).replace( '%2$s', src.total ) : '', st.res.cached ? t.cached : usageText( src.usage ) ].filter( Boolean ).join( ' · ' )
+			) );
+			if ( ! items.length ) {
+				out.push( h( 'p', { key: 'none', className: 'chk-ed__meta' }, t.lNone ) );
+			}
+			items.forEach( function ( it, i ) {
+				out.push( h( 'div', { key: 'l' + i, className: 'chk-link' },
+					h( C.CheckboxControl, {
+						checked: ! off[ i ],
+						onChange: function ( v ) {
+							var n = Object.assign( {}, off );
+							n[ i ] = ! v;
+							setOff( n );
+						},
+						label: h( 'span', { className: 'chk-link__text' }, h( 'mark', { className: 'chk-link__anchor' }, it.anchor ), ' ← ', h( 'a', { href: it.url, target: '_blank', rel: 'noopener', className: 'chk-link__to' }, it.title ) ),
+						__nextHasNoMarginBottom: true,
+					} )
+				) );
+			} );
+			if ( items.length ) {
+				out.push( h( C.Button, { key: 'ap', variant: 'primary', onClick: apply }, t.lApply ) );
+			}
+		}
+		return h( 'div', { className: 'chk-ed__task' }, out );
+	}
+
 	/* دسته و برچسب: پیشنهاد از میان موارد موجود سایت؛ با تأیید، در خودِ ویرایشگر می‌نشیند و با ذخیرهٔ نوشته ثبت می‌شود. */
 	function TermsTask() {
 		var made = useMade( 'terms' );
@@ -620,6 +746,7 @@
 			cfg.ready && cfg.supportsExcerpt ? h( Task, { task: 'excerpt', label: t.makeExcerpt, kw: k[ 0 ].trim() } ) : null,
 			cfg.ready && cfg.slug ? h( Task, { task: 'slug', label: t.makeSlug, kw: k[ 0 ].trim() } ) : null,
 			cfg.ready && cfg.terms && cfg.terms.length ? h( TermsTask ) : null,
+			cfg.ready && cfg.links ? h( LinksTask ) : null,
 			cfg.image ? h( ImageTask ) : null,
 			cfg.history === undefined ? h( HistoryTask ) : null
 		);

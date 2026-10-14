@@ -348,6 +348,11 @@
 /* ---------- جعبه ابزار ---------- */
 .chk-tool__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-block-end: 12px; }
 .chk-tool input[type="color"] { width: 100%; height: 40px; padding: 2px; }
+.chk-link { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0; border-block-end: 1px solid #f0f0f1; cursor: pointer; line-height: 1.8; }
+.chk-link:last-of-type { border-block-end: 0; }
+.chk-link input { margin-top: 5px; flex: none; }
+.chk-link__anchor { padding: 0 3px; border-radius: 3px; background: #fff4c2; color: inherit; }
+.chk-link__to { font-weight: 600; }
 .chk-pins { margin-block: 4px 14px; padding: 10px 12px; border: 1px solid var(--chk-line); border-radius: 6px; background: var(--chk-soft); }
 .chk-pins summary { cursor: pointer; font-weight: 600; }
 .chk-pins__list { margin: 8px 0 0; padding: 0; list-style: none; }

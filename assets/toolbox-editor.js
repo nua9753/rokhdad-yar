@@ -14,22 +14,24 @@
 	}
 
 	function Toolbox() {
-		var val = wp.data.useSelect( function ( select ) {
-			var meta = select( 'core/editor' ).getEditedPostAttribute( 'meta' ) || {};
-			return meta[ cfg.meta ] || 0;
+		var meta = wp.data.useSelect( function ( select ) {
+			return select( 'core/editor' ).getEditedPostAttribute( 'meta' ) || {};
 		}, [] );
 		var edit = wp.data.useDispatch( 'core/editor' ).editPost;
 		return h( Panel, { name: 'rokhdadyar-toolbox', title: cfg.title, className: 'chk-toolbox' },
-			h( C.CheckboxControl, {
-				label: cfg.pin,
-				help: cfg.help,
-				checked: !! val,
-				onChange: function ( on ) {
-					var m = {};
-					m[ cfg.meta ] = on ? Math.floor( Date.now() / 1000 ) : 0;
-					edit( { meta: m } );
-				},
-				__nextHasNoMarginBottom: true,
+			cfg.tools.map( function ( tool ) {
+				return h( C.CheckboxControl, {
+					key: tool.meta,
+					label: tool.label,
+					help: tool.help,
+					checked: !! meta[ tool.meta ],
+					onChange: function ( on ) {
+						var m = {};
+						m[ tool.meta ] = on ? Math.floor( Date.now() / 1000 ) : 0;
+						edit( { meta: m } );
+					},
+					__nextHasNoMarginBottom: true,
+				} );
 			} )
 		);
 	}

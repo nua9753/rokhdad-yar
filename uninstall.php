@@ -14,6 +14,8 @@ wp_clear_scheduled_hook( 'rokhdadyar_cleanup' );
 delete_option( 'rokhdadyar_front' );
 delete_site_transient( 'rokhdadyar_gh_release' );
 delete_post_meta_by_key( '_rokhdadyar_pin' );
+delete_post_meta_by_key( '_rokhdadyar_important' );
+delete_transient( 'chk_important' );
 
 global $wpdb;
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery

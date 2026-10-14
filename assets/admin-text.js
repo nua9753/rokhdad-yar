@@ -389,6 +389,10 @@
 			runTerms( btn, !! fresh );
 			return;
 		}
+		if ( task === 'links' ) {
+			R.runLinks( btn, !! fresh );
+			return;
+		}
 		if ( task === 'image' ) {
 			// کلیک روی دکمه: اول پرسیدن پرامپت. «دوباره بساز»: با همان پرامپتی که الان در فیلد است.
 			runImage( btn, asked ? promptValue() : '', asked );

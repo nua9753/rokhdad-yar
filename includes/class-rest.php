@@ -95,6 +95,25 @@ final class Rest {
 		}
 
 		// دسته و برچسب.
+		foreach ( array( 'links' => 'links', 'links/apply' => 'links_apply' ) as $path => $cb ) {
+			register_rest_route(
+				self::NS,
+				'/' . $path,
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( __CLASS__, $cb ),
+					'permission_callback' => static function ( \WP_REST_Request $req ) {
+						return Toolbox::links_on() && self::can_edit( $req );
+					},
+					'args'                => array(
+						'post_id' => array(
+							'type'     => 'integer',
+							'required' => true,
+						),
+					),
+				)
+			);
+		}
 		foreach ( array( 'terms' => 'terms', 'terms/apply' => 'terms_apply' ) as $path => $cb ) {
 			register_rest_route(
 				self::NS,
@@ -333,6 +352,20 @@ final class Rest {
 			(bool) $req['fresh']
 		);
 		return rest_ensure_response( Made::pass( (int) $req['post_id'], 'terms', $res ) );
+	}
+
+	public static function links( \WP_REST_Request $req ) {
+		$res = Links::suggest(
+			get_post( (int) $req['post_id'] ),
+			$req->has_param( 'content' ) ? (string) $req['content'] : null,
+			$req->has_param( 'title' ) ? (string) $req['title'] : null,
+			(bool) $req['fresh']
+		);
+		return rest_ensure_response( Made::pass( (int) $req['post_id'], 'links', $res ) );
+	}
+
+	public static function links_apply( \WP_REST_Request $req ) {
+		return rest_ensure_response( Links::apply( get_post( (int) $req['post_id'] ), is_array( $req['items'] ) ? $req['items'] : array() ) );
 	}
 
 	public static function terms_apply( \WP_REST_Request $req ) {
