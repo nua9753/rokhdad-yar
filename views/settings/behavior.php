@@ -117,6 +117,16 @@ defined( 'ABSPATH' ) || exit;
 				<p class="chk-hint"><?php esc_html_e( 'دسته یا برچسبی که بعد از ساخت فهرست به سایت اضافه شود، تا بازسازی بعدی پیشنهاد داده نمی‌شود.', 'rokhdadyar' ); ?></p>
 			</div>
 			<div class="chk-card">
+				<h2><?php esc_html_e( 'هوش مصنوعی در دل متن', 'rokhdadyar' ); ?></h2>
+				<label class="chk-check">
+					<input type="checkbox" name="chk[inline]" value="1" <?php checked( $s['inline'] ); ?>>
+					<span>
+						<?php esc_html_e( 'بازنویسی پاراگراف از نوار ابزار ویرایشگر', 'rokhdadyar' ); ?>
+						<em><?php esc_html_e( 'روی هر پاراگراف، دکمهٔ رخدادیار در نوار ابزار سه گزینه دارد: کوتاه‌تر، بلندتر، پرامپت خودم. فقط همان پاراگراف فرستاده می‌شود؛ دو نسخه برمی‌گردد و هر کدام را انتخاب کنید جای پاراگراف می‌نشیند. از «مدلِ چکیده» استفاده می‌کند.', 'rokhdadyar' ); ?></em>
+					</span>
+				</label>
+			</div>
+			<div class="chk-card">
 				<h2><?php esc_html_e( 'مصرف توکن', 'rokhdadyar' ); ?></h2>
 				<label class="chk-check">
 					<input type="checkbox" name="chk[bundle]" value="1" <?php checked( $s['bundle'] ); ?>>

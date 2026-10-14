@@ -26,6 +26,8 @@ final class Admin {
 		add_action( 'admin_notices', array( 'Rokhdadyar\\Guard', 'notice' ) );
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'block_assets' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'classic_box' ) );
+		add_filter( 'mce_external_plugins', array( __CLASS__, 'mce_plugin' ) );
+		add_filter( 'mce_buttons', array( __CLASS__, 'mce_button' ) );
 		add_action( 'add_meta_boxes', array( 'Rokhdadyar\\Toolbox', 'classic_box' ) );
 		add_action( 'save_post', array( 'Rokhdadyar\\Toolbox', 'classic_save' ) );
 		add_action( 'edit_form_before_permalink', array( __CLASS__, 'classic_title_button' ) );
@@ -257,9 +259,33 @@ final class Admin {
 		if ( Access::can( 'text' ) && Terms::enabled( $screen->post_type ) ) {
 			wp_enqueue_script( 'rokhdadyar-admin-terms', $url . 'admin-terms.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
 		}
+		if ( $is_edit && self::inline_on() ) {
+			wp_enqueue_script( 'rokhdadyar-classic-rewrite', $url . 'classic-rewrite.js', array( 'rokhdadyar-admin', 'quicktags' ), ROKHDADYAR_VER, true );
+		}
 		if ( Access::can( 'text' ) && Toolbox::links_on() ) {
 			wp_enqueue_script( 'rokhdadyar-admin-links', $url . 'admin-links.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
 		}
+	}
+
+	/** بازنویسی پاراگراف در دل متن: برای این کاربر و این صفحه روشن است؟ */
+	private static function inline_on(): bool {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		return $screen && 'post' === $screen->base && Settings::get( 'inline' ) && Settings::get( 'profiles' )
+			&& Access::can( 'text' ) && in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true );
+	}
+
+	public static function mce_plugin( $plugins ) {
+		if ( self::inline_on() ) {
+			$plugins['rokhdadyar'] = plugin_dir_url( ROKHDADYAR_FILE ) . 'assets/mce-rewrite.js?ver=' . ROKHDADYAR_VER;
+		}
+		return $plugins;
+	}
+
+	public static function mce_button( $buttons ) {
+		if ( self::inline_on() ) {
+			$buttons[] = 'rokhdadyar';
+		}
+		return $buttons;
 	}
 
 	/** محافظ نامک: مستقل از دسترسی به ابزارهای افزونه، برای هر کسی که نوشته را ویرایش می‌کند. */
@@ -277,6 +303,34 @@ final class Admin {
 
 	public static function block_assets(): void {
 		$screen = get_current_screen();
+		if ( self::inline_on() ) {
+			wp_enqueue_script( 'rokhdadyar-inline', plugin_dir_url( ROKHDADYAR_FILE ) . 'assets/inline-editor.js', array( 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-components', 'wp-element', 'wp-data', 'wp-api-fetch' ), ROKHDADYAR_VER, true );
+			$i18n = self::config()['i18n'];
+			wp_localize_script(
+				'rokhdadyar-inline',
+				'RokhdadyarInline',
+				array(
+					'i18n' => array(
+						'label'    => $i18n['rwLabel'],
+						'short'    => $i18n['rwShort'],
+						'long'     => $i18n['rwLong'],
+						'own'      => $i18n['rwOwn'],
+						'ownLabel' => $i18n['rwOwnLabel'],
+						'ownPh'    => $i18n['rwOwnPh'],
+						'current'  => $i18n['rwCurrent'],
+						'option'   => $i18n['rwOption'],
+						'chars'    => $i18n['rwChars'],
+						'go'       => $i18n['rwGo'],
+						'cancel'   => $i18n['rwCancel'],
+						'retry'    => $i18n['retry'],
+						'working'  => $i18n['working'],
+						'cached'   => $i18n['cached'],
+						'secs'     => $i18n['secs'],
+						'error'    => $i18n['error'],
+					),
+				)
+			);
+		}
 		$tb_pin = $screen && Toolbox::can( 'pin' ) && in_array( $screen->post_type, Toolbox::pin_types(), true );
 		$tb_imp = $screen && Toolbox::can( 'important' ) && in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true );
 		if ( $tb_pin || $tb_imp ) {
@@ -349,6 +403,7 @@ final class Admin {
 	private static function config(): array {
 		return array(
 			'logo'        => esc_url_raw( plugins_url( 'assets/logo.svg', ROKHDADYAR_FILE ) ),
+			'mark'        => esc_url_raw( plugins_url( 'assets/spark.svg', ROKHDADYAR_FILE ) ),
 			'root'        => esc_url_raw( rest_url( Rest::NS . '/' ) ),
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
 			'direct'      => (bool) Settings::get( 'direct_apply' ),
@@ -433,6 +488,24 @@ final class Admin {
 				/* translators: 1: sent, 2: total important posts */
 				'lSent'        => __( '%1$s از %2$s مطلب مهم بررسی شد', 'rokhdadyar' ),
 				'makeLinks'    => __( 'پیشنهاد لینک داخلی', 'rokhdadyar' ),
+				'rwLabel'      => __( 'رخدادیار', 'rokhdadyar' ),
+				'rwShort'      => __( 'کوتاه‌تر', 'rokhdadyar' ),
+				'rwLong'       => __( 'بلندتر', 'rokhdadyar' ),
+				'rwOwn'        => __( 'پرامپت خودم…', 'rokhdadyar' ),
+				'rwOwnLabel'   => __( 'این پاراگراف چطور بازنویسی شود؟', 'rokhdadyar' ),
+				'rwOwnPh'      => __( 'مثلاً: رسمی‌تر و با لحن خبری، کلیدواژهٔ «لاک ژله‌ای» هم بیاید', 'rokhdadyar' ),
+				'rwCurrent'    => __( 'پاراگراف فعلی', 'rokhdadyar' ),
+				/* translators: %s: option number */
+				'rwOption'     => __( 'نسخهٔ %s — برای جایگزینی بزنید', 'rokhdadyar' ),
+				/* translators: %s: number of characters */
+				'rwChars'      => __( '%s نویسه', 'rokhdadyar' ),
+				'rwGo'         => __( 'بازنویسی کن', 'rokhdadyar' ),
+				'rwCancel'     => __( 'انصراف', 'rokhdadyar' ),
+				'rwEdit'       => __( 'تغییر دستور', 'rokhdadyar' ),
+				'rwNoPara'     => __( 'اول نشانگر را داخل یک پاراگراف بگذارید (یا آن را انتخاب کنید).', 'rokhdadyar' ),
+				'rwSelect'     => __( 'اول متنِ پاراگراف را انتخاب کنید.', 'rokhdadyar' ),
+				'rwPickMode'   => __( 'متنِ انتخاب‌شده چطور بازنویسی شود؟', 'rokhdadyar' ),
+				'close'        => __( 'بستن', 'rokhdadyar' ),
 				'makeTerms'    => __( 'پیشنهاد دسته و برچسب', 'rokhdadyar' ),
 				'cats'         => __( 'دسته‌ها', 'rokhdadyar' ),
 				'tags'         => __( 'برچسب‌ها', 'rokhdadyar' ),

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       رخدادیار — عنوان، چکیده، نامک و تصویر شاخص با هوش مصنوعی
  * Description:       ساخت عنوان، چکیده، نامک، دسته و برچسب و تصویر شاخص نوشته با هوش مصنوعی؛ با مرکز کنترل برای مدل‌ها، Base URL، کلید API و پرامپت‌ها.
- * Version:           2.16.0
+ * Version:           2.17.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            رخدادیار
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ROKHDADYAR_VER', '2.16.0' );
+define( 'ROKHDADYAR_VER', '2.17.0' );
 define( 'ROKHDADYAR_FILE', __FILE__ );
 define( 'ROKHDADYAR_DIR', __DIR__ . '/' );
 

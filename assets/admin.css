@@ -366,3 +366,21 @@
 .chk-pin-preview { display: flex; align-items: center; gap: 6px; min-height: 40px; font-weight: 600; }
 .chk-pin-badge { display: inline-flex; align-items: center; gap: .3em; padding: .15em .7em; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .chk-pin-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .9; }
+
+/* ---------- بازنویسی پاراگراف ---------- */
+.chk-rw .components-modal__content, .chk-rwc__box { max-width: 640px; }
+.chk-rwc__box { max-width: 640px !important; border-block-start-color: var(--chk-accent) !important; }
+.chk-rwc__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-block-end: 8px; }
+.chk-rwc__title { margin: 0; font-size: 15px; font-weight: 700; }
+.chk-rwc__label { display: block; font-weight: 600; }
+.chk-rwc__label textarea { display: block; width: 100%; margin-block-start: 6px; }
+.chk-rw__busy { display: flex; align-items: center; gap: 6px; color: var(--chk-muted); }
+.chk-rw__meta { margin: 0 0 8px; color: var(--chk-muted); font-size: 12px; }
+.chk-rw__orig, .chk-rw__opt { display: block; width: 100%; box-sizing: border-box; margin-block-end: 10px; padding: 10px 12px; border: 1px solid var(--chk-line); border-radius: 8px; background: #fff; color: var(--chk-ink); font: inherit; line-height: 1.9; text-align: start; }
+.chk-rw__orig { background: var(--chk-soft); color: var(--chk-muted); }
+.chk-rw__opt { cursor: pointer; }
+.chk-rw__opt:hover, .chk-rw__opt:focus-visible { border-color: var(--chk-accent); box-shadow: 0 0 0 1px var(--chk-accent); outline: 0; }
+.chk-rw__tag { display: block; margin-block-end: 4px; color: var(--chk-muted); font-size: 11px; font-weight: 600; }
+.chk-rw__opt .chk-rw__tag { color: var(--chk-accent); }
+.chk-rw__text a { color: var(--chk-accent); }
+.chk-rw__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 8px; }

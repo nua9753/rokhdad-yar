@@ -48,6 +48,7 @@ final class Settings {
 			'use_meta'        => 1,
 			'post_types'      => array( 'post' ),
 			'direct_apply'    => 0,
+			'inline'          => 1, // بازنویسی پاراگراف از نوار ابزار ویرایشگر
 			'tools'           => array(), // جعبه ابزار؛ پیش‌فرض‌ها در Toolbox::defaults
 			'max_parallel'    => 2, // ۰ = بی‌سقف.
 			'access'          => array(), // خالی = پیش‌فرض (Access::defaults).
@@ -322,6 +323,7 @@ final class Settings {
 
 		$new['use_meta']     = empty( $raw['use_meta'] ) ? 0 : 1;
 		$new['direct_apply'] = empty( $raw['direct_apply'] ) ? 0 : 1;
+		$new['inline']       = empty( $raw['inline'] ) ? 0 : 1;
 		$new['max_parallel'] = max( 0, min( 10, (int) ( $raw['max_parallel'] ?? 2 ) ) );
 		$new['access']       = Access::sanitize( $raw['access'] ?? array() );
 		$new['ask_keyword']  = empty( $raw['ask_keyword'] ) ? 0 : 1;

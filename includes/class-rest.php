@@ -95,6 +95,23 @@ final class Rest {
 		}
 
 		// دسته و برچسب.
+		register_rest_route(
+			self::NS,
+			'/rewrite',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'rewrite' ),
+				'permission_callback' => static function ( \WP_REST_Request $req ) {
+					return Settings::get( 'inline' ) && self::can_edit( $req );
+				},
+				'args'                => array(
+					'post_id' => array(
+						'type'     => 'integer',
+						'required' => true,
+					),
+				),
+			)
+		);
 		foreach ( array( 'links' => 'links', 'links/apply' => 'links_apply' ) as $path => $cb ) {
 			register_rest_route(
 				self::NS,
@@ -352,6 +369,19 @@ final class Rest {
 			(bool) $req['fresh']
 		);
 		return rest_ensure_response( Made::pass( (int) $req['post_id'], 'terms', $res ) );
+	}
+
+	public static function rewrite( \WP_REST_Request $req ) {
+		return rest_ensure_response(
+			Rewrite::run(
+				get_post( (int) $req['post_id'] ),
+				(string) $req['html'],
+				sanitize_key( (string) $req['mode'] ),
+				sanitize_textarea_field( (string) $req['prompt'] ),
+				sanitize_text_field( (string) $req['title'] ),
+				(bool) $req['fresh']
+			)
+		);
 	}
 
 	public static function links( \WP_REST_Request $req ) {
