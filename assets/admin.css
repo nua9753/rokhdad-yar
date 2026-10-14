@@ -1,0 +1,353 @@
+/* رخدادیار — یک فایل برای همهٔ صفحه‌ها. از رنگ پوستهٔ پیشخوان کاربر پیروی می‌کند و با ویژگی‌های منطقی در RTL و LTR یکسان کار می‌کند. */
+:root {
+	--chk-accent: var(--wp-admin-theme-color, #2271b1);
+	--chk-accent-dark: var(--wp-admin-theme-color-darker-10, #135e96);
+	--chk-ink: #1d2327;
+	--chk-muted: #646970;
+	--chk-line: #dcdcde;
+	--chk-soft: #f6f7f7;
+	--chk-ok: #008a20;
+	--chk-bad: #b32d2e;
+	--chk-warn: #996800;
+	--chk-made: #6c3fc5;
+	--chk-made-bg: #f1ebfd;
+	--chk-radius: 8px;
+}
+
+/* ---------- دکمهٔ کوچک ---------- */
+.column-rokhdadyar { width: 210px; }
+.chk-col-head { display: inline-flex; align-items: center; gap: 6px; color: var(--chk-muted); white-space: nowrap; }
+.chk-actions { display: flex; flex-wrap: wrap; gap: 6px 4px; }
+.chk-btn.chk-btn--hidden { display: none; }
+.chk-btn--plain .chk-spark { display: none; }
+.chk-actions--box { flex-direction: column; gap: 8px; }
+
+.chk-btn {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-width: 30px;
+	height: 26px;
+	padding: 0 6px;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	background: #fff;
+	color: var(--chk-ink);
+	font: inherit;
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	transition: border-color .12s, color .12s, background-color .12s;
+}
+.chk-btn:hover,
+.chk-btn.is-open { border-color: var(--chk-accent); color: var(--chk-accent); }
+.chk-btn:focus-visible { outline: 2px solid var(--chk-accent); outline-offset: 1px; }
+.chk-btn__glyph { font-weight: 600; font-family: Georgia, "Times New Roman", serif; }
+.chk-btn .chk-spark {
+	position: absolute;
+	inset-block-start: -5px;
+	inset-inline-end: -5px;
+	width: 11px;
+	height: 11px;
+	padding: 1px;
+	border-radius: 50%;
+	background: #fff;
+	color: var(--chk-accent);
+}
+.chk-btn--missing { border-style: dashed; border-color: var(--chk-warn); color: var(--chk-warn); }
+.chk-btn--missing .chk-spark { color: var(--chk-warn); }
+.chk-btn--wide { width: 100%; height: 34px; justify-content: flex-start; padding: 0 12px; }
+.chk-btn--wide .chk-spark { position: static; width: 13px; height: 13px; padding: 0; background: none; order: 3; margin-inline-start: auto; }
+/* قبلاً یک بار برای این نوشته ساخته شده */
+.chk-btn.is-made { border-color: var(--chk-made); background: var(--chk-made-bg); color: var(--chk-made); }
+.chk-btn.is-made .chk-spark { background: var(--chk-made-bg); color: var(--chk-made); }
+.chk-btn--wide.is-made .chk-spark { background: none; }
+.chk-btn.is-made:hover, .chk-btn.is-made.is-open { border-color: var(--chk-made); color: var(--chk-made); filter: brightness(.96); }
+.chk-ed__go.components-button.is-made { background: var(--chk-made-bg); box-shadow: inset 0 0 0 1px var(--chk-made); color: var(--chk-made); }
+.chk-btn.is-busy { border-color: var(--chk-accent); color: var(--chk-accent); pointer-events: none; }
+.chk-btn.is-busy .chk-spark { animation: chk-spin 1s linear infinite; }
+.chk-btn.is-done { border-color: var(--chk-ok); background: #edfaef; color: var(--chk-ok); border-style: solid; }
+.chk-btn.is-done .chk-spark { color: var(--chk-ok); }
+@keyframes chk-spin { to { transform: rotate(360deg); } }
+
+/* ---------- پنجرهٔ پیشنهاد ---------- */
+.chk-pop {
+	position: fixed;
+	z-index: 100000;
+	width: 360px;
+	max-width: calc(100vw - 16px);
+	border: 1px solid var(--chk-line);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+	color: var(--chk-ink);
+	font-size: 13px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+.chk-pop > * { flex: none; }
+.chk-pop > .chk-pop__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.chk-pop.is-saving { opacity: .6; pointer-events: none; }
+.chk-pop__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-block-end: 1px solid #f0f0f1; }
+.chk-pop__head strong { font-size: 13px; white-space: nowrap; }
+.chk-pop__meta { flex: 1; min-width: 0; overflow: hidden; color: var(--chk-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.chk-pop__x { margin: -4px; padding: 4px 8px; border: 0; background: none; color: var(--chk-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.chk-pop__x:hover { color: var(--chk-ink); }
+.chk-pop__body { padding: 10px 12px; }
+.chk-pop__note { margin: 0 0 8px; color: var(--chk-muted); font-size: 12px; }
+.chk-pop__error { margin: 0; padding: 8px 10px; border: 1px solid #e8b4b5; border-radius: 6px; background: #fcf0f1; color: #8a1f20; overflow-wrap: anywhere; }
+.chk-pop__text { display: block; width: 100%; padding: 8px 10px; border-color: var(--chk-line); border-radius: 6px; line-height: 1.8; resize: vertical; }
+.chk-pop__count { display: block; margin-block-start: 6px; color: var(--chk-muted); font-size: 11px; }
+.chk-pop__count.is-over, .chk-opt__len.is-over { color: var(--chk-warn); }
+.chk-pop__foot { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px 12px; }
+.chk-pop__foot:empty { display: none; }
+
+.chk-opt {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	width: 100%;
+	margin: 0 0 6px;
+	padding: 9px 10px;
+	border: 1px solid var(--chk-line);
+	border-radius: 6px;
+	background: #fff;
+	color: var(--chk-ink);
+	font: inherit;
+	line-height: 1.7;
+	text-align: start;
+	cursor: pointer;
+}
+.chk-opt:hover, .chk-opt:focus-visible { border-color: var(--chk-accent); box-shadow: 0 0 0 1px var(--chk-accent); outline: 0; }
+.chk-opt__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.chk-opt__len { color: var(--chk-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+.chk-skel i { display: block; height: 34px; margin-block-end: 6px; border-radius: 6px; background: linear-gradient(90deg, #f0f0f1 25%, #f6f7f7 50%, #f0f0f1 75%); background-size: 200% 100%; animation: chk-shine 1.2s linear infinite; }
+.chk-skel i:nth-child(2) { width: 86%; }
+.chk-skel i:nth-child(3) { width: 70%; }
+@keyframes chk-shine { to { background-position: -200% 0; } }
+
+/* ---------- ویرایشگر بلوکی ---------- */
+.chk-ed__task + .chk-ed__task { margin-block-start: 16px; padding-block-start: 16px; border-block-start: 1px solid #f0f0f1; }
+.chk-ed__go.components-button { width: 100%; justify-content: center; gap: 6px; }
+.chk-ed__go.components-button svg { width: 14px; height: 14px; margin: 0; }
+.chk-ed__ok { display: block; margin-block-start: 8px; color: var(--chk-ok); font-size: 12px; }
+.chk-ed__task .chk-ed__meta { margin: 10px 0 8px; color: var(--chk-muted); font-size: 11px; }
+.chk-ed__task .components-notice { margin: 8px 0 0; }
+.chk-ed__task .components-base-control { margin-block-end: 8px; }
+
+/* ---------- مرکز کنترل ---------- */
+.chk-wrap { max-width: 880px; color: var(--chk-ink); }
+.chk-head { display: flex; align-items: center; gap: 14px; margin: 18px 0 8px; }
+.chk-head h1 { margin: 0; padding: 0; font-size: 22px; font-weight: 600; line-height: 1; }
+.chk-head p { margin: 0; color: var(--chk-muted); }
+.chk-logo { display: block; width: auto; height: 44px; margin-block-end: 4px; }
+.chk-wordmark { display: inline-block; width: auto; vertical-align: middle; }
+.chk-ed__brand { display: inline-flex; align-items: center; }
+.chk-ed__brand img { display: block; width: auto; height: 18px; }
+.chk-status { margin-inline-start: auto; padding: 4px 12px; border-radius: 99px; background: #fcf9e8; color: var(--chk-warn); font-size: 12px; white-space: nowrap; }
+.chk-status.is-on { background: #edfaef; color: var(--chk-ok); }
+
+.chk-tabs { display: flex; gap: 4px; margin: 16px 0; border-block-end: 1px solid var(--chk-line); overflow-x: auto; }
+.chk-tabs button { margin-block-end: -1px; padding: 10px 14px; border: 0; border-block-end: 2px solid transparent; background: none; color: var(--chk-muted); font: inherit; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.chk-tabs button:hover { color: var(--chk-ink); }
+.chk-tabs button.is-active { border-color: var(--chk-accent); color: var(--chk-ink); font-weight: 600; }
+.chk-tabs button:focus-visible { outline: 2px solid var(--chk-accent); outline-offset: -2px; }
+
+.chk-panel { display: none; }
+.chk-panel.is-active { display: block; }
+
+.chk-card { margin-block-end: 14px; padding: 18px 20px; border: 1px solid var(--chk-line); border-radius: var(--chk-radius); background: #fff; }
+.chk-card h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.chk-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-block-end: 10px; }
+.chk-hint { margin: 0; color: var(--chk-muted); font-size: 12px; line-height: 1.7; }
+.chk-card > .chk-hint:last-child { margin-block-start: 12px; }
+
+.chk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; align-items: end; }
+.chk-grid--4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-block-start: 12px; }
+.chk-field { display: block; }
+.chk-field--wide { grid-column: 1 / -1; }
+.chk-field--narrow { max-width: 320px; margin-block-start: 16px; }
+.chk-field > span { display: block; margin-block-end: 5px; font-size: 12px; font-weight: 600; }
+.chk-field em, .chk-check em { display: inline; color: var(--chk-muted); font-size: 11px; font-style: normal; font-weight: 400; }
+.chk-check em { display: block; margin-block-start: 2px; line-height: 1.7; }
+.chk-field input, .chk-field select { width: 100%; max-width: none; min-height: 36px; margin: 0; }
+.chk-ltr { direction: ltr; text-align: left; font-family: Consolas, Monaco, monospace; font-size: 12.5px; }
+.chk-ltr::placeholder { color: #a7aaad; }
+
+.chk-route { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; background: var(--chk-soft); }
+.chk-route .chk-hint { grid-column: 1 / -1; }
+
+.chk-profile__head { display: flex; align-items: center; gap: 8px; margin-block-end: 14px; }
+.chk-wrap .chk-profile__label[type="text"] { flex: 1; min-width: 0; min-height: 34px; margin: 0; padding: 0 8px; border-color: transparent; background: none; box-shadow: none; font-size: 15px; font-weight: 600; }
+.chk-wrap .chk-profile__label[type="text"]:hover { border-color: var(--chk-line); }
+.chk-wrap .chk-profile__label[type="text"]:focus { border-color: var(--chk-accent); background: #fff; }
+.chk-icon-btn { width: 30px; height: 30px; border: 0; border-radius: 6px; background: none; color: var(--chk-muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.chk-icon-btn:hover { background: #fcf0f1; color: var(--chk-bad); }
+.chk-test { max-width: 46%; overflow: hidden; color: var(--chk-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.chk-test.is-ok { color: var(--chk-ok); }
+.chk-test.is-bad { color: var(--chk-bad); white-space: normal; }
+
+.chk-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border: 1px dashed #c3c4c7; border-radius: var(--chk-radius); color: var(--chk-muted); }
+
+.chk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 10px; direction: ltr; justify-content: flex-end; }
+[dir="ltr"] .chk-chips, .ltr .chk-chips { justify-content: flex-start; }
+.chk-chip { padding: 3px 9px; border: 1px solid var(--chk-line); border-radius: 99px; background: var(--chk-soft); color: var(--chk-ink); font-family: Consolas, Monaco, monospace; font-size: 12px; cursor: pointer; }
+.chk-chip:hover { border-color: var(--chk-accent); color: var(--chk-accent); }
+.chk-prompt { display: block; width: 100%; padding: 12px 14px; border-color: var(--chk-line); border-radius: 6px; background: var(--chk-soft); font-size: 13px; line-height: 1.9; resize: vertical; }
+.chk-prompt:focus { background: #fff; }
+
+.chk-options { display: grid; gap: 8px; margin: 12px 0 18px; }
+.chk-option { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--chk-line); border-radius: 6px; line-height: 1.8; cursor: pointer; }
+.chk-option:has(input:checked) { border-color: var(--chk-accent); box-shadow: 0 0 0 1px var(--chk-accent); }
+.chk-option input { margin-block-start: 5px; flex: none; }
+.chk-option strong { display: block; }
+.chk-option i { margin-inline-start: 6px; padding: 1px 8px; border-radius: 99px; background: #edfaef; color: var(--chk-ok); font-size: 11px; font-style: normal; font-weight: 400; }
+.chk-option span { color: var(--chk-muted); font-size: 12.5px; }
+.chk-option strong { color: var(--chk-ink); font-size: 13px; }
+.chk-check { display: flex; gap: 8px; align-items: flex-start; line-height: 1.6; }
+.chk-check input { margin-block-start: 3px; flex: none; }
+.chk-checks { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-block-start: 10px; }
+
+.chk-save { position: sticky; inset-block-end: 0; z-index: 5; display: flex; margin-block-start: 4px; padding: 12px 0; background: #f0f0f1; border-block-start: 1px solid var(--chk-line); }
+
+/* ---------- نشانگرهای سئو و گزینه‌های چکیده ---------- */
+.chk-opt { flex-direction: column; align-items: stretch; gap: 6px; }
+.chk-opt.is-picked { border-color: var(--chk-accent); box-shadow: 0 0 0 1px var(--chk-accent); background: #f6f7f7; }
+.chk-opt--excerpt .chk-opt__text { font-size: 12.5px; }
+.chk-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.chk-badge { padding: 1px 8px; border-radius: 99px; font-size: 11px; line-height: 1.7; white-space: nowrap; }
+.chk-badge.is-ok { background: #e3f5e6; color: #006b18; }
+.chk-badge.is-warn { background: #fcf3d7; color: #7a5200; }
+.chk-pop__warn { margin: 0 0 10px; padding: 8px 10px; border: 1px solid #f0d58a; border-radius: 6px; background: #fcf9e8; color: #6b4a00; font-size: 12px; line-height: 1.7; }
+.chk-opt__text.chk-ltr { display: block; text-align: left; }
+.chk-badge.is-style { background: var(--chk-accent); color: #fff; font-weight: 600; }
+.chk-pop { width: 400px; }
+.chk-pop__body { max-height: min(62vh, 520px); overflow-y: auto; }
+.chk-pop__note--edit { margin: 8px 0 6px; }
+.chk-ed__count { margin: 6px 0 10px; }
+
+/* ---------- ویرایشگر کلاسیک: دکمه‌های درجا ---------- */
+#titlediv { position: relative; }
+.chk-inline--title { position: absolute; z-index: 2; inset-block-start: 6px; inset-inline-end: 8px; }
+#titlediv #title { padding-inline-end: 48px; }
+.chk-inline--excerpt { display: flex; justify-content: flex-end; margin-block-end: 8px; }
+.chk-flash { animation: chk-flash 1.6s ease-out; }
+@keyframes chk-flash { from { box-shadow: 0 0 0 3px var(--chk-accent); } to { box-shadow: 0 0 0 3px transparent; } }
+
+/* ---------- فیلد کلیدواژه ---------- */
+.chk-kw { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.chk-kw__label { flex: none; font-size: 12px; font-weight: 600; }
+.chk-kw__input[type="text"] { flex: 1; min-width: 0; min-height: 32px; margin: 0; padding: 0 8px; border-color: var(--chk-line); border-radius: 6px; font-size: 13px; }
+.chk-kw__input[type="text"]:focus { border-color: var(--chk-accent); box-shadow: 0 0 0 1px var(--chk-accent); }
+.chk-kw__hint { margin: -4px 0 0; }
+.chk-ed .chk-ed__kw { margin-block-end: 16px; }
+
+/* ---------- تصویر شاخص ---------- */
+.chk-btn svg:not(.chk-spark) { display: block; }
+.chk-pop__img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; margin-block-end: 10px; border-radius: 6px; background: #f0f0f1; }
+.chk-kw--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+.chk-kw--stack .chk-kw__input[type="text"] { flex: none; width: 100%; }
+.chk-kw--stack .chk-pop__note { margin: 2px 0 0; font-weight: 400; }
+.chk-ed__task .chk-ed__go { margin-block-start: 8px; }
+.chk-pop__details { color: var(--chk-muted); font-size: 12px; }
+.chk-pop__details summary { cursor: pointer; }
+.chk-pop__details p { margin: 6px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--chk-soft); text-align: left; line-height: 1.6; overflow-wrap: anywhere; }
+.chk-ed__task .chk-pop__img { margin-block: 10px; }
+.chk-ed__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 10px; }
+
+/* ---------- دسته و برچسب ---------- */
+.chk-terms { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 0; border: 0; min-width: 0; }
+.chk-terms legend { width: 100%; margin-block-end: 6px; padding: 0; }
+.chk-terms__all { margin-inline-start: 10px; font-size: 11px; font-weight: 400; text-decoration: underline; cursor: pointer; background: none; border: 0; padding: 0; color: var(--chk-accent); }
+.chk-term { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 10px; border: 1px solid var(--chk-line); border-radius: 99px; background: #fff; font-size: 12.5px; cursor: pointer; }
+.chk-term input[type="checkbox"] { margin: 0; }
+.chk-term:has(input:checked) { border-color: var(--chk-accent); background: var(--chk-soft); }
+.chk-term.is-new:has(input:checked) { border-style: dashed; }
+.chk-term em { color: var(--chk-muted); font-size: 11px; font-style: normal; }
+
+/* ---------- تاریخچه و برگشت ---------- */
+.chk-hist { padding: 10px 0; border-block-end: 1px solid #f0f0f1; }
+.chk-hist:last-child { border-block-end: 0; padding-block-end: 0; }
+.chk-hist__head { display: flex; align-items: center; gap: 8px; }
+.chk-hist__meta { color: var(--chk-muted); font-size: 11px; }
+.chk-hist__val { margin: 6px 0 8px; line-height: 1.8; overflow-wrap: anywhere; }
+
+/* ---------- گزارش مصرف ---------- */
+.chk-months { display: flex; flex-wrap: wrap; gap: 6px; margin-block: 12px; }
+.chk-months .chk-chip { font-family: inherit; text-decoration: none; }
+.chk-months .chk-chip.is-on { border-color: var(--chk-accent); background: var(--chk-accent); color: #fff; }
+.chk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 0; }
+.chk-stats > div { padding: 12px 14px; border: 1px solid var(--chk-line); border-radius: 6px; background: var(--chk-soft); }
+.chk-stats dt { color: var(--chk-muted); font-size: 12px; }
+.chk-stats dd { margin: 2px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chk-own { margin-block-start: 10px; padding-block-start: 8px; border-block-start: 1px solid #f0f0f1; }
+.chk-own summary { cursor: pointer; color: var(--chk-accent); font-size: 12px; font-weight: 600; }
+.chk-own[open] summary { margin-block-end: 6px; }
+.chk-own .chk-own__text { width: 100%; box-sizing: border-box; }
+.chk-own .button { margin-block-start: 4px; }
+.chk-ed__own { margin-block-start: 8px; }
+.chk-pop__foot .chk-img__drop { margin-inline-end: auto; }
+.chk-keylost { display: block; margin-block-start: 4px; color: var(--chk-bad); font-size: 12px; font-weight: 600; }
+.chk-access td, .chk-access thead th:not(:first-child) { text-align: center; white-space: normal; }
+/* نمودار میله‌ای ۱۵ روز اخیر */
+.chk-chart__title { margin: 16px 0 6px; color: var(--chk-muted); font-size: 12px; font-weight: 600; }
+.chk-chart { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 6px; height: 150px; margin: 0; padding: 0; list-style: none; }
+.chk-chart li { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; margin: 0; }
+.chk-chart__val { color: var(--chk-ink); font-size: 10.5px; line-height: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chk-chart__bar { flex: none; width: 100%; max-width: 28px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--chk-accent); }
+.chk-chart__bar.is-zero { background: var(--chk-line); }
+.chk-chart li:hover .chk-chart__bar { background: var(--chk-accent-dark); }
+.chk-chart__day { flex: none; line-height: 20px; color: var(--chk-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chk-table-wrap { margin-block-start: 10px; overflow-x: auto; }
+.chk-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.chk-table th, .chk-table td { padding: 8px 10px; border-block-end: 1px solid #f0f0f1; text-align: start; white-space: nowrap; }
+.chk-table thead th { color: var(--chk-muted); font-size: 12px; font-weight: 600; }
+.chk-table tbody th { font-weight: 600; }
+.chk-table tbody tr:last-child th, .chk-table tbody tr:last-child td { border-block-end: 0; }
+
+/* ---------- فهرست مدل‌ها ---------- */
+.chk-combo { display: flex; gap: 6px; font-weight: 400; }
+.chk-combo input { flex: 1; min-width: 0; }
+.chk-combo .button { flex: none; min-height: 36px; }
+.chk-models-out { display: block; margin-block-start: 4px; color: var(--chk-muted); font-size: 11px; font-weight: 400; }
+.chk-models-out:empty { display: none; }
+.chk-models-out.is-ok { color: var(--chk-ok); }
+.chk-models-out.is-bad { color: var(--chk-bad); }
+.chk-add select { min-height: 36px; min-width: 220px; }
+
+@media (max-width: 782px) {
+	.chk-btn { min-width: 44px; height: 40px; }
+	.chk-pop__x { padding: 10px 14px; }
+	.chk-grid, .chk-grid--4, .chk-route { grid-template-columns: 1fr; }
+	.chk-status { display: none; }
+	.chk-profile__head { flex-wrap: wrap; }
+	.chk-test { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.chk-btn, .chk-btn .chk-spark, .chk-skel i, .chk-flash { animation: none; transition: none; }
+}
+
+/* ---------- محافظ نامک ---------- */
+.chk-guard { position: fixed; inset: 0; z-index: 160000; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .55); }
+.chk-guard__box { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box; padding: 20px 22px; border-block-start: 6px solid var(--chk-bad); border-radius: 10px; background: #fff; box-shadow: 0 16px 48px rgba(0, 0, 0, .3); color: var(--chk-ink); font-size: 13px; line-height: 1.8; }
+.chk-guard__title { margin: 0 0 8px; color: var(--chk-bad); font-size: 17px; font-weight: 700; line-height: 1.5; }
+.chk-guard__lead { margin: 0 0 6px; font-weight: 600; }
+.chk-guard__risks { margin: 0 0 10px; padding-inline-start: 20px; list-style: disc; }
+.chk-guard__risks li { margin: 0 0 4px; }
+.chk-guard__note { margin: 0 0 12px; padding: 8px 10px; border-radius: 6px; background: #fcf0f1; color: #8a2424; font-size: 12px; }
+.chk-guard__ack { display: flex; gap: 8px; align-items: flex-start; margin-block-end: 14px; font-weight: 600; cursor: pointer; }
+.chk-guard__ack input { margin-top: 4px; flex: none; }
+.chk-guard__foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.chk-guard__yes.button { border-color: var(--chk-bad); color: var(--chk-bad); }
+.chk-guard__yes.button:disabled { opacity: .5; }
+
+/* ---------- جعبه ابزار ---------- */
+.chk-tool__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-block-end: 12px; }
+.chk-tool input[type="color"] { width: 100%; height: 40px; padding: 2px; }
+.chk-pin-preview { display: flex; align-items: center; gap: 6px; min-height: 40px; font-weight: 600; }
+.chk-pin-badge { display: inline-flex; align-items: center; gap: .3em; padding: .15em .7em; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.chk-pin-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .9; }
