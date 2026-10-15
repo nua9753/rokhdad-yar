@@ -452,9 +452,24 @@ final class Image {
 			'name'     => self::file_name( $post, (string) ( $cfg['filename'] ?? '' ) ) . '.' . $ext,
 			'tmp_name' => $tmp,
 		);
-		$id   = media_handle_sideload( $file, $post->ID, '' !== $alt ? $alt : $post->post_title );
+		// عنوان پیوست: کوتاه و سازگار با charset جدول (ایموجی در جدول utf8 قدیمی درج را خراب می‌کند)؛
+		// نامک پیوست لاتین و هم‌نام فایل، تا نامکِ فارسیِ کدشدهٔ طولانی ساخته نشود.
+		global $wpdb;
+		$title = mb_substr( wp_strip_all_tags( '' !== $alt ? $alt : $post->post_title ), 0, 180, 'UTF-8' );
+		$clean = $wpdb->strip_invalid_text_for_column( $wpdb->posts, 'post_title', $title );
+		$title = is_string( $clean ) && '' !== trim( $clean ) ? $clean : $file['name'];
+		$id    = media_handle_sideload( $file, $post->ID, $title, array( 'post_name' => sanitize_title( pathinfo( $file['name'], PATHINFO_FILENAME ) ) ) );
 		if ( is_wp_error( $id ) ) {
 			wp_delete_file( $tmp );
+			if ( 'db_insert_error' === $id->get_error_code() ) {
+				$db = (string) $id->get_error_data();
+				return new \WP_Error(
+					'chk_img_db',
+					__( 'وردپرس نتوانست تصویر را در پایگاه‌داده ثبت کند («پیوست‌ها نمی‌توانند در پایگاه داده درج شوند»). این مشکلِ خودِ پایگاه‌داده است و آپلودهای دیگر سایت را هم خراب می‌کند. ', 'rokhdadyar' )
+						. Health::hint() . ( '' !== $db ? ' [' . $db . ']' : '' ),
+					array( 'status' => 500 )
+				);
+			}
 			return $id;
 		}
 		update_post_meta( $id, '_wp_attachment_image_alt', wp_slash( $alt ) );

@@ -138,4 +138,19 @@ defined( 'ABSPATH' ) || exit;
 				<textarea id="chk-img-prompt" class="chk-prompt" name="chk[image][prompt]" rows="9" data-prompt="image" dir="auto"><?php echo esc_textarea( $chk_img['prompt'] ); ?></textarea>
 				<p class="chk-hint"><?php esc_html_e( 'متغیرها: {style} {title} {keyword} {content}. خروجی باید دو خط PROMPT: و ALT: باشد.', 'rokhdadyar' ); ?></p>
 			</div>
+
+			<div class="chk-card chk-health" data-health>
+				<div class="chk-card__head">
+					<div>
+						<h2><?php esc_html_e( 'سلامت آپلود', 'rokhdadyar' ); ?></h2>
+						<p class="chk-hint"><?php esc_html_e( 'اگر آپلود تصویر (در کتابخانهٔ رسانه، از نشانی بیرونی یا همین افزونه) گاهی شکست می‌خورد یا خطای «پیوست‌ها نمی‌توانند در پایگاه داده درج شوند» می‌آید، این بررسی علت را پیدا می‌کند. فقط می‌خواند و یک ردیف آزمایشی را درج و فوراً حذف می‌کند.', 'rokhdadyar' ); ?></p>
+					</div>
+					<button type="button" class="button" data-health-run><?php esc_html_e( 'بررسی کن', 'rokhdadyar' ); ?></button>
+				</div>
+				<ul class="chk-health__list" data-health-out aria-live="polite"></ul>
+				<div class="chk-health__fix" data-health-fix hidden>
+					<p class="chk-hint"><?php esc_html_e( 'تعمیر: ردیف‌های با شناسهٔ ۰ به شناسهٔ تازه منتقل می‌شوند (چیزی حذف نمی‌شود) و کلید اصلی و AUTO_INCREMENT جدول‌ها برمی‌گردد. پیش از تعمیر از پایگاه‌داده پشتیبان بگیرید.', 'rokhdadyar' ); ?></p>
+					<button type="button" class="button button-primary" data-health-repair><?php esc_html_e( 'تعمیر پایگاه‌داده', 'rokhdadyar' ); ?></button>
+				</div>
+			</div>
 		</section>

@@ -155,6 +155,35 @@
 		} );
 	}
 
+	function health( btn ) {
+		var box = form.querySelector( '[data-health]' );
+		var out = box.querySelector( '[data-health-out]' );
+		out.textContent = '';
+		var li = document.createElement( 'li' );
+		li.textContent = t.healthRunning;
+		out.appendChild( li );
+		btn.disabled = true;
+		call( 'health', {} ).then( function ( j ) {
+			out.textContent = '';
+			j.items.forEach( function ( it ) {
+				var row = document.createElement( 'li' );
+				row.className = 'is-' + it.status;
+				var b = document.createElement( 'strong' );
+				b.textContent = it.label;
+				var d = document.createElement( 'span' );
+				d.textContent = it.detail;
+				row.appendChild( b );
+				row.appendChild( d );
+				out.appendChild( row );
+			} );
+			box.querySelector( '[data-health-fix]' ).hidden = ! j.fixable;
+		} ).catch( function ( e ) {
+			out.textContent = e.message;
+		} ).then( function () {
+			btn.disabled = false;
+		} );
+	}
+
 	form.addEventListener( 'click', function ( e ) {
 		var b = e.target.closest( 'button' );
 		if ( ! b ) {
@@ -183,6 +212,20 @@
 			} ).then( function () {
 				b.disabled = false;
 			} );
+		} else if ( b.hasAttribute( 'data-health-run' ) ) {
+			health( b );
+		} else if ( b.hasAttribute( 'data-health-repair' ) ) {
+			if ( window.confirm( t.healthConfirm ) ) {
+				b.disabled = true;
+				call( 'health/fix', {} ).then( function ( j ) {
+					window.alert( ( j.done.length ? t.healthFixed + ' ' + j.done.join( '، ' ) : '' ) + ( j.failed.length ? '\n' + j.failed.join( '\n' ) : '' ) || t.healthNothing );
+					health( form.querySelector( '[data-health-run]' ) );
+				} ).catch( function ( e ) {
+					window.alert( e.message );
+				} ).then( function () {
+					b.disabled = false;
+				} );
+			}
 		} else if ( b.hasAttribute( 'data-test' ) ) {
 			testProfile( b.closest( '[data-profile]' ), b );
 		} else if ( b.hasAttribute( 'data-reset' ) ) {

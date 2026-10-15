@@ -183,6 +183,23 @@ final class Rest {
 				},
 			)
 		);
+
+		// سلامت آپلود: بررسی و تعمیر (فقط مدیر).
+		foreach ( array( 'health' => 'run', 'health/fix' => 'fix' ) as $path => $fn ) {
+			register_rest_route(
+				self::NS,
+				'/' . $path,
+				array(
+					'methods'             => 'POST',
+					'callback'            => static function () use ( $fn ) {
+						return rest_ensure_response( Health::$fn() );
+					},
+					'permission_callback' => static function () {
+						return current_user_can( 'manage_options' );
+					},
+				)
+			);
+		}
 	}
 
 	public static function can_edit( \WP_REST_Request $req ): bool {

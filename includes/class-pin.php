@@ -76,8 +76,8 @@ final class Pin {
 	/** پس از ذخیرهٔ کامل نوشته (متا و دسته‌ها هم ذخیره شده‌اند): نقشهٔ پین‌ها به‌روز می‌شود. */
 	public static function refresh( int $post_id ): void {
 		$post = get_post( $post_id );
-		if ( ! $post || wp_is_post_revision( $post_id ) ) {
-			return;
+		if ( ! $post || wp_is_post_revision( $post_id ) || in_array( $post->post_type, array( 'attachment', 'revision', 'nav_menu_item' ), true ) ) {
+			return; // آپلود رسانه و منو هیچ ربطی به پین ندارد؛ زودتر بیرون می‌رویم.
 		}
 		$f   = self::front();
 		$map = is_array( $f['map'] ?? null ) ? $f['map'] : array();
