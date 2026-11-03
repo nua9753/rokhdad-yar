@@ -447,3 +447,20 @@
 @media (max-width: 600px) { .chk-health__list li { grid-template-columns: 10px 1fr; } .chk-health__list li span { grid-column: 2; } }
 .chk-health__fix { margin-block-start: 12px; padding: 12px; border-radius: 8px; background: #fcf0f1; }
 .chk-health__fix .chk-hint { margin: 0 0 8px; color: #8a2424; }
+
+/* تصویرهای مرجع */
+.chk-refs { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 6px; }
+.chk-refs__item { position: relative; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--chk-soft); box-shadow: inset 0 0 0 1px var(--chk-line); }
+.chk-refs__item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.chk-refs__x { position: absolute; inset-block-start: 3px; inset-inline-end: 3px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .65); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; }
+.chk-refs__x:hover, .chk-refs__x:focus-visible { background: var(--chk-bad); outline: 0; }
+.chk-refs__add { width: 64px; height: 64px; padding: 0; border: 1.5px dashed var(--chk-line); border-radius: 8px; background: #fff; color: var(--chk-muted); font-size: 24px; line-height: 1; cursor: pointer; }
+.chk-refs__add:hover, .chk-refs__add:focus-visible { border-color: var(--chk-accent); color: var(--chk-accent); outline: 0; }
+.chk-refs__add[hidden] { display: none; }
+.chk-refs-box { margin-block: 10px; }
+.chk-refs-box__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 12px; }
+.chk-refs-box .chk-refs__item, .chk-refs-box .chk-refs__add { width: 56px; height: 56px; }
+.chk-refs-box select { min-height: 28px; font-size: 12px; }
+.chk-refs-box .chk-pop__note, .chk-refs-box .components-base-control__help { display: block; margin-block-start: 4px; }
+.media-modal { z-index: 170000; }
+.media-modal-backdrop { z-index: 169999; }

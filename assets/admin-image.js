@@ -79,6 +79,102 @@
 		wrap.appendChild( el( 'span', 'chk-pop__note', hint ) );
 		return wrap;
 	}
+	/* تصویرهای مرجع: انتخاب از کتابخانهٔ رسانه (یا آپلود همان‌جا)، حداکثر cfg.refMax تا. */
+	function refsState() {
+		if ( ! R.state.refs ) {
+			R.state.refs = ( cfg.imgRefs || [] ).slice();
+			R.state.role = cfg.imgRole || 'subject';
+		}
+		return R.state.refs;
+	}
+	function refsBox() {
+		var refs = refsState();
+		var box = el( 'div', 'chk-refs-box' );
+		var head = el( 'div', 'chk-refs-box__head' );
+		head.appendChild( el( 'span', '', t.imgRefs ) );
+		var sel = el( 'select' );
+		[ [ 'subject', t.imgRoleSubject ], [ 'style', t.imgRoleStyle ] ].forEach( function ( o ) {
+			var op = el( 'option', '', o[ 1 ] );
+			op.value = o[ 0 ];
+			sel.appendChild( op );
+		} );
+		sel.value = R.state.role;
+		sel.title = t.imgRole;
+		sel.setAttribute( 'aria-label', t.imgRole );
+		sel.hidden = ! refs.length;
+		sel.addEventListener( 'change', function () {
+			R.state.role = sel.value;
+		} );
+		head.appendChild( sel );
+		box.appendChild( head );
+		var list = el( 'div', 'chk-refs' );
+		function draw() {
+			list.textContent = '';
+			refs.forEach( function ( r, i ) {
+				var it = el( 'span', 'chk-refs__item' );
+				var im = el( 'img' );
+				im.src = r.url;
+				im.alt = '';
+				im.addEventListener( 'load', place );
+				var x = el( 'button', 'chk-refs__x', '×' );
+				x.type = 'button';
+				x.setAttribute( 'aria-label', t.imgRefRemove );
+				x.addEventListener( 'click', function () {
+					refs.splice( i, 1 );
+					draw();
+				} );
+				it.appendChild( im );
+				it.appendChild( x );
+				list.appendChild( it );
+			} );
+			if ( refs.length < ( cfg.refMax || 4 ) && window.wp && window.wp.media ) {
+				var add = el( 'button', 'chk-refs__add', '+' );
+				add.type = 'button';
+				add.title = t.imgRefsAdd;
+				add.setAttribute( 'aria-label', t.imgRefsPick );
+				add.addEventListener( 'click', function () {
+					pick( draw );
+				} );
+				list.appendChild( add );
+			}
+			sel.hidden = ! refs.length;
+			place();
+		}
+		draw();
+		box.appendChild( list );
+		box.appendChild( el( 'span', 'chk-pop__note', t.imgRefsHint ) );
+		return box;
+	}
+	function pick( draw ) {
+		var refs = R.state.refs;
+		var frame = window.wp.media( { title: t.imgRefsPick, library: { type: 'image' }, multiple: true, button: { text: t.imgRefsUse } } );
+		R.mediaOpen = true;
+		frame.on( 'close', function () {
+			setTimeout( function () {
+				R.mediaOpen = false;
+			}, 0 );
+		} );
+		frame.on( 'select', function () {
+			frame.state().get( 'selection' ).each( function ( m ) {
+				var a = m.toJSON();
+				if ( refs.length >= ( cfg.refMax || 4 ) || refs.some( function ( r ) {
+					return r.id === a.id;
+				} ) ) {
+					return;
+				}
+				refs.push( { id: a.id, url: a.sizes && a.sizes.thumbnail ? a.sizes.thumbnail.url : a.url } );
+			} );
+			draw();
+		} );
+		frame.open();
+		frame.content.mode( 'browse' ); // همیشه کتابخانه، نه زبانهٔ آپلود (آپلود هم همان‌جا هست).
+	}
+	function refIds() {
+		return ( R.state && R.state.refs ? R.state.refs : [] ).map( function ( r ) {
+			return r.id;
+		} );
+	}
+
 	function promptValue() {
 		var ta = R.pop && R.pop.querySelector( '.chk-img__prompt' );
 		return ta ? ta.value.trim() : ( R.state && R.state.prompt ) || '';
@@ -86,7 +182,8 @@
 
 	function showImageAsk() {
 		shell( 'image' );
-		part( 'body' ).appendChild( promptField( '', t.imgHint ) );
+		part( 'body' ).appendChild( promptField( R.state.prompt || '', t.imgHint ) );
+		part( 'body' ).appendChild( refsBox() );
 		var ok = el( 'button', 'button button-primary', t.go );
 		ok.type = 'button';
 		ok.addEventListener( 'click', function () {
@@ -101,11 +198,15 @@
 
 	function runImage( btn, prompt, asked ) {
 		var postId = parseInt( btn.getAttribute( 'data-chk-post' ), 10 );
-		var old = R.state && R.state.btn === btn ? R.state.pending : 0;
-		if ( R.state && R.state.btn !== btn ) {
+		var same = R.state && R.state.btn === btn;
+		var old = same ? R.state.pending : 0;
+		var refs = same ? R.state.refs : null;
+		var role = same ? R.state.role : null;
+		if ( R.state && ! same ) {
 			close();
 		}
-		R.state = { btn: btn, task: 'image', postId: postId, pending: 0, prompt: prompt || '' };
+		R.state = { btn: btn, task: 'image', postId: postId, pending: 0, prompt: prompt || '', refs: refs, role: role };
+		refsState();
 		btn.classList.add( 'is-open' );
 		if ( ! asked ) {
 			// اگر تصویری ساخته شده ولی هنوز ثبت نشده، همان برمی‌گردد (بدون ساخت و هزینهٔ دوباره).
@@ -116,6 +217,10 @@
 				}
 				if ( res && res.id ) {
 					R.state.pending = res.id;
+					if ( res.refs && res.refs.length ) {
+						R.state.refs = res.refs;
+						R.state.role = res.role || R.state.role;
+					}
 					showImage( res );
 				} else {
 					showImageAsk();
@@ -130,7 +235,7 @@
 		btn.classList.add( 'is-busy' );
 		showLoading( 'image', t.imgWorking );
 
-		var data = { post_id: postId, discard: old || 0, prompt: prompt || '' };
+		var data = { post_id: postId, discard: old || 0, prompt: prompt || '', refs: refIds(), ref_role: R.state.role };
 		if ( inEditor ) {
 			data.content = liveContent();
 			data.title = titleField.value;
@@ -169,8 +274,12 @@
 		lab.appendChild( alt );
 		b.appendChild( lab );
 
-		part( 'meta' ).textContent = [ res.restored ? t.imgPending : '', res.custom ? t.imgCustom : t.imgAuto, res.quota ].filter( Boolean ).join( ' · ' );
+		part( 'meta' ).textContent = [ res.restored ? t.imgPending : '', res.custom ? t.imgCustom : t.imgAuto, res.refs && res.refs.length ? t.imgWithRefs.replace( '%s', res.refs.length ) : '', res.quota ].filter( Boolean ).join( ' · ' );
+		if ( res.note ) {
+			b.appendChild( el( 'p', 'chk-pop__warn', res.note ) );
+		}
 		b.appendChild( promptField( res.prompt, t.imgUsed ) );
+		b.appendChild( refsBox() );
 
 		var f = part( 'foot' );
 		f.appendChild( retryBtn() );

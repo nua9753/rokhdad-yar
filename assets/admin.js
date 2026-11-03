@@ -327,13 +327,16 @@
 		}
 		// دکمه‌های داخل پنجره وقتی پنجره را از نو می‌سازند دیگر در صفحه نیستند؛ آن کلیک «بیرون» حساب نمی‌شود.
 		// پیش‌نمایش تصویر با کلیک اشتباه بیرون پنجره بسته نمی‌شود؛ فقط با ×، Esc، «ثبت» یا «نمی‌خواهم».
-		var keep = R.state && R.state.task === 'image' && R.state.pending;
+		var keep = R.state && R.state.task === 'image' && ( R.state.pending || R.mediaOpen );
+		if ( e.target.closest && e.target.closest( '.media-modal, .media-modal-backdrop' ) ) {
+			return; // پنجرهٔ کتابخانهٔ رسانه (انتخاب تصویر مرجع) بیرونِ پنجرهٔ ما حساب نمی‌شود.
+		}
 		if ( R.pop && ! keep && ! downIn && ! R.pop.contains( e.target ) && document.body.contains( e.target ) ) {
 			close();
 		}
 	} );
 	document.addEventListener( 'keydown', function ( e ) {
-		if ( e.key === 'Escape' && R.state ) {
+		if ( e.key === 'Escape' && R.state && ! R.mediaOpen ) {
 			var b = R.state.btn;
 			close();
 			b.focus();

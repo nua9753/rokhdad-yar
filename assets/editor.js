@@ -611,7 +611,40 @@
 		var pr = useState( '' );
 		var prompt = pr[ 0 ];
 		var setPrompt = pr[ 1 ];
+		var rf = useState( ( cfg.imgRefs || [] ).slice() ); // تصویرهای مرجع { id, url }
+		var refs = rf[ 0 ];
+		var setRefs = rf[ 1 ];
+		var ro = useState( cfg.imgRole || 'subject' );
+		var role = ro[ 0 ];
+		var setRole = ro[ 1 ];
 		var busy = st.status === 'busy';
+
+		function pickRefs() {
+			if ( ! wp.media ) {
+				return;
+			}
+			var frame = wp.media( { title: t.imgRefsPick, library: { type: 'image' }, multiple: true, button: { text: t.imgRefsUse } } );
+			frame.on( 'select', function () {
+				var add = [];
+				frame.state().get( 'selection' ).each( function ( m ) {
+					var x = m.toJSON();
+					add.push( { id: x.id, url: x.sizes && x.sizes.thumbnail ? x.sizes.thumbnail.url : x.url } );
+				} );
+				setRefs( function ( cur ) {
+					var out = cur.slice();
+					add.forEach( function ( a ) {
+						if ( out.length < ( cfg.refMax || 4 ) && ! out.some( function ( r ) {
+							return r.id === a.id;
+						} ) ) {
+							out.push( a );
+						}
+					} );
+					return out;
+				} );
+			} );
+			frame.open();
+			frame.content.mode( 'browse' ); // همیشه کتابخانه، نه زبانهٔ آپلود (آپلود هم همان‌جا هست).
+		}
 
 		function fail( e ) {
 			set( { status: 'error', msg: ( e && e.message ) || t.error } );
@@ -622,6 +655,10 @@
 				if ( res && res.id ) {
 					setAlt( res.alt );
 					setPrompt( res.prompt );
+					if ( res.refs && res.refs.length ) {
+						setRefs( res.refs );
+						setRole( res.role || role );
+					}
 					set( function ( cur ) {
 						return cur.status === 'idle' ? { status: 'result', res: res } : cur;
 					} );
@@ -638,6 +675,10 @@
 					post_id: editor().getCurrentPostId(),
 					discard: old,
 					prompt: prompt.trim(), // خالی = خودکار از روی متن؛ پر = عیناً همین.
+					refs: refs.map( function ( r ) {
+						return r.id;
+					} ),
+					ref_role: role,
 					content: editor().getEditedPostContent(),
 					title: editor().getEditedPostAttribute( 'title' ) || '',
 				},
@@ -679,6 +720,38 @@
 				help: st.status === 'result' ? t.imgUsed : t.imgHint,
 				__nextHasNoMarginBottom: true,
 			} ),
+			h( 'div', { key: 'refs', className: 'chk-refs-box' },
+				h( 'div', { className: 'chk-refs-box__head' },
+					h( 'span', null, t.imgRefs ),
+					refs.length ? h( 'select', {
+						value: role,
+						'aria-label': t.imgRole,
+						title: t.imgRole,
+						onChange: function ( e ) {
+							setRole( e.target.value );
+						},
+					}, h( 'option', { value: 'subject' }, t.imgRoleSubject ), h( 'option', { value: 'style' }, t.imgRoleStyle ) ) : null
+				),
+				h( 'div', { className: 'chk-refs' },
+					refs.map( function ( r ) {
+						return h( 'span', { key: r.id, className: 'chk-refs__item' },
+							h( 'img', { src: r.url, alt: '' } ),
+							h( 'button', {
+								type: 'button',
+								className: 'chk-refs__x',
+								'aria-label': t.imgRefRemove,
+								onClick: function () {
+									setRefs( refs.filter( function ( x ) {
+										return x.id !== r.id;
+									} ) );
+								},
+							}, '×' )
+						);
+					} ),
+					refs.length < ( cfg.refMax || 4 ) && wp.media ? h( 'button', { type: 'button', className: 'chk-refs__add', title: t.imgRefsAdd, 'aria-label': t.imgRefsPick, onClick: pickRefs }, '+' ) : null
+				),
+				h( 'span', { className: 'components-base-control__help' }, t.imgRefsHint )
+			),
 			h( C.Button, {
 				key: 'go',
 				variant: 'secondary',
@@ -698,7 +771,10 @@
 		}
 		if ( st.status === 'result' ) {
 			out.push( h( 'img', { key: 'img', className: 'chk-pop__img', src: st.res.url, alt: alt } ) );
-			out.push( h( 'p', { key: 'quota', className: 'chk-ed__meta' }, st.res.quota ) );
+			if ( st.res.note ) {
+				out.push( h( C.Notice, { key: 'note', status: 'warning', isDismissible: false }, st.res.note ) );
+			}
+			out.push( h( 'p', { key: 'quota', className: 'chk-ed__meta' }, [ st.res.refs && st.res.refs.length ? t.imgWithRefs.replace( '%s', st.res.refs.length ) : '', st.res.quota ].filter( Boolean ).join( ' · ' ) ) );
 			out.push( h( C.TextControl, {
 				key: 'alt',
 				label: t.imgAlt,

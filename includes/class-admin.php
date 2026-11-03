@@ -233,6 +233,7 @@ final class Admin {
 		}
 		if ( 'settings_page_' . self::PAGE === $hook ) {
 			wp_enqueue_style( 'rokhdadyar', $url . 'admin.css', array(), ROKHDADYAR_VER );
+			wp_enqueue_media(); // تصویرهای مرجع پیش‌فرض
 			wp_enqueue_script( 'rokhdadyar-settings', $url . 'settings.js', array(), ROKHDADYAR_VER, true );
 			wp_localize_script( 'rokhdadyar-settings', 'RokhdadyarCfg', self::config() );
 			return;
@@ -254,6 +255,7 @@ final class Admin {
 		// ماژول‌ها کوچک‌اند و فقط روی همین دو صفحه بار می‌شوند؛ تصویر و دسته فقط وقتی آن بخش برای این کاربر روشن است.
 		wp_enqueue_script( 'rokhdadyar-admin-text', $url . 'admin-text.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
 		if ( Image::ready() && Access::can( 'image' ) ) {
+			wp_enqueue_media(); // انتخاب تصویر مرجع از کتابخانهٔ رسانه (یا آپلود همان‌جا)
 			wp_enqueue_script( 'rokhdadyar-admin-image', $url . 'admin-image.js', array( 'rokhdadyar-admin' ), ROKHDADYAR_VER, true );
 		}
 		if ( Access::can( 'text' ) && Terms::enabled( $screen->post_type ) ) {
@@ -413,6 +415,9 @@ final class Admin {
 			'root'        => esc_url_raw( rest_url( Rest::NS . '/' ) ),
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
 			'direct'      => (bool) Settings::get( 'direct_apply' ),
+			'imgRefs'     => Image::ready() ? Image::ref_list( (array) Image::config()['refs'] ) : array(),
+			'imgRole'     => (string) Image::config()['ref_role'],
+			'refMax'      => Image::REF_MAX,
 			'askKeyword'  => (bool) Settings::get( 'ask_keyword' ),
 			'ready'       => (bool) Settings::get( 'profiles' ),
 			'settingsUrl' => current_user_can( 'manage_options' ) ? self::url() : '',
@@ -484,6 +489,17 @@ final class Admin {
 				'imgAuto'      => __( 'خودکار از روی متن', 'rokhdadyar' ),
 				'imgCustom'    => __( 'پرامپت شما', 'rokhdadyar' ),
 				'imgDiscard'   => __( 'نمی‌خواهم', 'rokhdadyar' ),
+				'imgRefs'      => __( 'تصویر مرجع', 'rokhdadyar' ),
+				'imgRefsAdd'   => __( 'افزودن', 'rokhdadyar' ),
+				'imgRefsPick'  => __( 'انتخاب تصویر مرجع', 'rokhdadyar' ),
+				'imgRefsUse'   => __( 'استفاده به‌عنوان مرجع', 'rokhdadyar' ),
+				'imgRefsHint'  => __( 'اختیاری؛ تا ۴ تصویر از کتابخانهٔ رسانه یا آپلود همان‌جا. مدل تصویر را بر اساس آن‌ها می‌سازد.', 'rokhdadyar' ),
+				'imgRefRemove' => __( 'برداشتن', 'rokhdadyar' ),
+				'imgRole'      => __( 'از مرجع چه بگیرد؟', 'rokhdadyar' ),
+				'imgRoleSubject' => __( 'همین سوژه / محصول', 'rokhdadyar' ),
+				'imgRoleStyle' => __( 'فقط سبک و رنگ', 'rokhdadyar' ),
+				/* translators: %s: number of reference images */
+				'imgWithRefs'  => __( 'با %s تصویر مرجع', 'rokhdadyar' ),
 				'slug'         => __( 'نامک پیشنهادی', 'rokhdadyar' ),
 				'makeSlug'     => __( 'ساخت نامک', 'rokhdadyar' ),
 				'terms'        => __( 'دسته و برچسب پیشنهادی', 'rokhdadyar' ),

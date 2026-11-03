@@ -124,6 +124,25 @@ defined( 'ABSPATH' ) || exit;
 					<span><?php esc_html_e( 'سبک ثابت تصویرها', 'rokhdadyar' ); ?> <em><?php esc_html_e( 'برای اینکه همهٔ تصویرهای سایت یک‌دست باشند؛ انگلیسی بنویسید', 'rokhdadyar' ); ?></em></span>
 					<input type="text" class="chk-ltr" name="chk[image][style]" value="<?php echo esc_attr( $chk_img['style'] ); ?>">
 				</label>
+				<div class="chk-field chk-refs-field" style="margin-block-end:12px">
+					<span><?php esc_html_e( 'تصویرهای مرجع پیش‌فرض', 'rokhdadyar' ); ?> <em><?php esc_html_e( 'اختیاری؛ مثلاً لوگو، محصول اصلی یا چند تصویر با سبک دلخواه سایت. هنگام ساخت از پیش انتخاب‌شده‌اند و نویسنده می‌تواند برشان دارد یا عوضشان کند.', 'rokhdadyar' ); ?></em></span>
+					<?php $chk_refs = Image::ref_list( (array) $chk_img['refs'] ); ?>
+					<input type="hidden" name="chk[image][refs]" value="<?php echo esc_attr( implode( ',', wp_list_pluck( $chk_refs, 'id' ) ) ); ?>" data-refs-input>
+					<div class="chk-refs" data-refs-list>
+						<?php foreach ( $chk_refs as $r ) : ?>
+							<span class="chk-refs__item" data-id="<?php echo (int) $r['id']; ?>"><img src="<?php echo esc_url( $r['url'] ); ?>" alt=""><button type="button" class="chk-refs__x" data-refs-remove aria-label="<?php esc_attr_e( 'برداشتن', 'rokhdadyar' ); ?>">×</button></span>
+						<?php endforeach; ?>
+						<button type="button" class="chk-refs__add" data-refs-add aria-label="<?php esc_attr_e( 'افزودن تصویر مرجع', 'rokhdadyar' ); ?>">+</button>
+					</div>
+				</div>
+				<label class="chk-field" style="margin-block-end:12px;max-width:320px">
+					<span><?php esc_html_e( 'پیش‌فرضِ «از مرجع چه بگیرد؟»', 'rokhdadyar' ); ?></span>
+					<select name="chk[image][ref_role]">
+						<option value="subject" <?php selected( $chk_img['ref_role'], 'subject' ); ?>><?php esc_html_e( 'همین سوژه / محصول (شکل، رنگ و جزئیات حفظ شود)', 'rokhdadyar' ); ?></option>
+						<option value="style" <?php selected( $chk_img['ref_role'], 'style' ); ?>><?php esc_html_e( 'فقط سبک و رنگ (سوژه از روی متن)', 'rokhdadyar' ); ?></option>
+					</select>
+				</label>
+				<p class="chk-hint" style="margin-block:-4px 14px"><?php esc_html_e( 'تصویر مرجع با مدل‌هایی کار می‌کند که ورودی تصویر می‌پذیرند: gpt-image-1 (سازگار با OpenAI، از راه ‎/images/edits‎) و مدل‌های تصویری Gemini. اگر مدل نپذیرد، تصویر بدون مرجع ساخته و به نویسنده گفته می‌شود.', 'rokhdadyar' ); ?></p>
 				<label class="chk-check">
 					<input type="checkbox" name="chk[image][writer]" value="1" <?php checked( $chk_img['writer'] ); ?>>
 					<span>

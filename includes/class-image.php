@@ -32,6 +32,9 @@ final class Image {
 		'4k'  => array( '3840x2160', '4K' ),
 	);
 	const QUALITIES = array( 'low', 'medium', 'high' );
+	const REF_MAX   = 4;    // حداکثر تصویر مرجع در هر درخواست
+	const REF_SIDE  = 1024; // تصویر مرجع پیش از ارسال تا این اندازه کوچک می‌شود (حجم و هزینهٔ کمتر)
+	const ROLES     = array( 'subject', 'style' );
 
 	public static function defaults(): array {
 		return array(
@@ -51,6 +54,8 @@ final class Image {
 			'height'    => 800,
 			'webp'      => 1,
 			'filename'  => '{slug}-{date}', // الگوی نام فایل؛ تاریخ و ساعت جلوی نام تکراری را می‌گیرد.
+			'refs'      => array(),   // تصویرهای مرجع پیش‌فرض (شناسهٔ پیوست)؛ هنگام ساخت از پیش انتخاب‌شده‌اند
+			'ref_role'  => 'subject', // subject = همین سوژه/محصول | style = فقط سبک و رنگ
 		);
 	}
 
@@ -98,13 +103,15 @@ final class Image {
 			'height'    => max( 315, min( 2400, (int) ( $raw['height'] ?? $d['height'] ) ) ),
 			'webp'      => empty( $raw['webp'] ) ? 0 : 1,
 			'filename'  => '' !== trim( (string) ( $raw['filename'] ?? '' ) ) ? mb_substr( sanitize_text_field( (string) $raw['filename'] ), 0, 120, 'UTF-8' ) : $d['filename'],
+			'refs'      => self::clean_refs( is_array( $raw['refs'] ?? null ) ? $raw['refs'] : explode( ',', (string) ( $raw['refs'] ?? '' ) ), false ),
+			'ref_role'  => in_array( $raw['ref_role'] ?? '', self::ROLES, true ) ? (string) $raw['ref_role'] : 'subject',
 		);
 	}
 
 	/**
 	 * @return array|\WP_Error { id, url, alt, prompt }
 	 */
-	public static function generate( \WP_Post $post, ?string $content = null, ?string $title = null, string $custom = '' ) {
+	public static function generate( \WP_Post $post, ?string $content = null, ?string $title = null, string $custom = '', array $refs = array(), string $role = '' ) {
 		$cfg = self::config();
 		if ( ! self::ready() ) {
 			return new \WP_Error( 'chk_img_off', __( 'ساخت تصویر شاخص در مرکز کنترل فعال یا کامل تنظیم نشده است.', 'rokhdadyar' ), array( 'status' => 400 ) );
@@ -141,8 +148,19 @@ final class Image {
 				'alt'    => '' !== $ctx['title'] ? $ctx['title'] : $ctx['keyword'],
 			)
 			: self::brief( $ctx, $cfg );
-		$key   = Settings::decrypt( $cfg['api_key'] );
-		$bytes = 'gemini' === $cfg['format'] ? self::call_gemini( $cfg, $key, $brief['prompt'] ) : self::call_openai( $cfg, $key, $brief['prompt'] );
+		$key    = Settings::decrypt( $cfg['api_key'] );
+		$refs   = self::clean_refs( $refs, true );
+		$role   = in_array( $role, self::ROLES, true ) ? $role : (string) $cfg['ref_role'];
+		$images = array();
+		foreach ( $refs as $rid ) {
+			$one = self::ref_image( $rid );
+			if ( $one ) {
+				$images[] = $one;
+			}
+		}
+		$send  = $images ? self::ref_note( $role, count( $images ) ) . $brief['prompt'] : $brief['prompt'];
+		self::$ignored = false;
+		$bytes = 'gemini' === $cfg['format'] ? self::call_gemini( $cfg, $key, $send, $images ) : self::call_openai( $cfg, $key, $send, $images );
 		if ( ! is_wp_error( $bytes ) ) {
 			// سرویس تصویر را ساخته و هزینه‌اش حساب شده؛ همین‌جا شمرده می‌شود، حتی اگر ذخیره شکست بخورد.
 			update_option(
@@ -171,6 +189,8 @@ final class Image {
 				'alt'    => $brief['alt'],
 				'prompt' => $brief['prompt'],
 				'custom' => '' !== $custom,
+				'refs'   => $refs,
+				'role'   => $role,
 				't'      => time(),
 			)
 		);
@@ -184,6 +204,9 @@ final class Image {
 			'alt'    => $brief['alt'],
 			'prompt' => $brief['prompt'],
 			'custom' => '' !== $custom,
+			'refs'   => self::ref_list( $refs ),
+			'role'   => $role,
+			'note'   => self::$ignored ? __( 'این مدل تصویر مرجع نمی‌پذیرد؛ تصویر بدون مرجع ساخته شد. برای استفاده از مرجع، مدلی مثل gpt-image-1 یا Gemini Image انتخاب کنید.', 'rokhdadyar' ) : '',
 			'quota'  => $cfg['daily_cap']
 				/* translators: 1: used today, 2: daily cap */
 				? sprintf( __( 'امروز %1$d از %2$d', 'rokhdadyar' ), $used, $cfg['daily_cap'] )
@@ -263,14 +286,126 @@ final class Image {
 		return $out;
 	}
 
+
+	/** @var bool مدل مرجع‌ها را نپذیرفت و بدون آن‌ها ساخته شد. */
+	private static $ignored = false;
+
+	/**
+	 * فقط تصویرهای واقعی کتابخانهٔ رسانه، بدون تکرار، حداکثر REF_MAX تا.
+	 * $check: کاربر فعلی باید اجازهٔ دیدن پیوست را داشته باشد (برای درخواست‌ها؛ تنظیمات را مدیر ذخیره می‌کند).
+	 */
+	public static function clean_refs( array $ids, bool $check ): array {
+		$out = array();
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			if ( $id < 1 || in_array( $id, $out, true ) || 'attachment' !== get_post_type( $id ) || ! wp_attachment_is_image( $id ) ) {
+				continue;
+			}
+			if ( $check && ! current_user_can( 'read_post', $id ) ) {
+				continue;
+			}
+			$out[] = $id;
+			if ( count( $out ) >= self::REF_MAX ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+	/** برای نمایش در پنجره: شناسه و پیش‌نمایش کوچک. */
+	public static function ref_list( array $ids ): array {
+		$out = array();
+		foreach ( $ids as $id ) {
+			$src = wp_get_attachment_image_url( (int) $id, 'thumbnail' );
+			if ( $src ) {
+				$out[] = array(
+					'id'  => (int) $id,
+					'url' => $src,
+				);
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * فایل مرجع، کوچک‌شده تا REF_SIDE پیکسل (PNG شفاف می‌ماند، بقیه JPEG).
+	 *
+	 * @return array|null { bytes, mime, name }
+	 */
+	private static function ref_image( int $id ): ?array {
+		require_once ABSPATH . 'wp-admin/includes/file.php'; // wp_tempnam
+		$path = get_attached_file( $id );
+		if ( ! $path || ! is_readable( $path ) ) {
+			return null;
+		}
+		$mime = (string) wp_get_image_mime( $path );
+		$png  = 'image/png' === $mime;
+		$ed   = wp_get_image_editor( $path );
+		if ( ! is_wp_error( $ed ) ) {
+			$ed->resize( self::REF_SIDE, self::REF_SIDE, false );
+			$ed->set_quality( 85 );
+			$tmp   = wp_tempnam( 'rokhdadyar-ref' );
+			$saved = $ed->save( $tmp . ( $png ? '.png' : '.jpg' ), $png ? 'image/png' : 'image/jpeg' );
+			wp_delete_file( $tmp );
+			if ( ! is_wp_error( $saved ) && ! empty( $saved['path'] ) ) {
+				$bytes = (string) file_get_contents( $saved['path'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				wp_delete_file( $saved['path'] );
+				return '' === $bytes ? null : array(
+					'bytes' => $bytes,
+					'mime'  => $png ? 'image/png' : 'image/jpeg',
+					'name'  => 'ref-' . $id . ( $png ? '.png' : '.jpg' ),
+				);
+			}
+		}
+		// بدون پردازشگر تصویر: خود فایل، اگر خیلی بزرگ نباشد.
+		if ( in_array( $mime, array( 'image/png', 'image/jpeg', 'image/webp' ), true ) && filesize( $path ) <= 4 * MB_IN_BYTES ) {
+			return array(
+				'bytes' => (string) file_get_contents( $path ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				'mime'  => $mime,
+				'name'  => 'ref-' . $id . '.' . ( 'image/png' === $mime ? 'png' : ( 'image/webp' === $mime ? 'webp' : 'jpg' ) ),
+			);
+		}
+		return null;
+	}
+
+	/** دستور انگلیسیِ اول پرامپت دربارهٔ نقش تصویرهای مرجع. */
+	private static function ref_note( string $role, int $n ): string {
+		$which = $n > 1 ? 'the attached reference images' : 'the attached reference image';
+		return 'style' === $role
+			? "Use {$which} only as a style guide: match their color palette, lighting, mood and rendering style, but do not copy their subject or composition. "
+			: "Use {$which} as the exact subject: keep the product/person/object faithful to the reference in shape, colors, materials, patterns and details, and place it in the new scene described below. ";
+	}
+
+	/** بدنهٔ multipart برای ‎/images/edits‎. */
+	private static function multipart( array $fields, array $images, string $boundary ): string {
+		$out = '';
+		foreach ( $fields as $k => $v ) {
+			$out .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$k}\"\r\n\r\n{$v}\r\n";
+		}
+		$field = count( $images ) > 1 ? 'image[]' : 'image';
+		foreach ( $images as $im ) {
+			$out .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$field}\"; filename=\"{$im['name']}\"\r\nContent-Type: {$im['mime']}\r\n\r\n{$im['bytes']}\r\n";
+		}
+		return $out . "--{$boundary}--\r\n";
+	}
+
 	/**
 	 * هر سرویس سازگار با ‎/images/generations‎ (OpenAI، xAI و درگاه‌ها).
 	 *
 	 * @return string|\WP_Error بایت‌های تصویر.
 	 */
-	private static function call_openai( array $c, string $key, string $prompt ) {
+	private static function call_openai( array $c, string $key, string $prompt, array $images = array() ) {
 		$base = $c['base_url'] ? $c['base_url'] : 'https://api.openai.com/v1';
 		$url  = preg_match( '#/images/generations$#', $base ) ? $base : $base . '/images/generations';
+		if ( $images ) {
+			$res = self::call_openai_edit( $c, $key, $prompt, $images, (string) preg_replace( '#/images/generations$#', '/images/edits', $url ) );
+			// مدل یا درگاهی که ‎/images/edits‎ ندارد: بدون مرجع ساخته و به کاربر گفته می‌شود.
+			if ( ! is_wp_error( $res ) || ! in_array( (int) ( $res->get_error_data()['upstream'] ?? 0 ), array( 400, 404, 405, 415, 422, 501 ), true ) ) {
+				return $res;
+			}
+			self::$ignored = true;
+			$prompt        = (string) preg_replace( '/^Use the attached reference image.*?\. /s', '', $prompt );
+		}
 		$body = array(
 			'model'  => $c['model'],
 			'prompt' => $prompt,
@@ -306,8 +441,65 @@ final class Image {
 		return new \WP_Error( 'chk_img_empty', __( 'سرویس تصویر پاسخی بدون تصویر برگرداند.', 'rokhdadyar' ), array( 'status' => 502 ) );
 	}
 
-	/** مدل‌های تصویرساز Gemini از راه generateContent. */
-	private static function call_gemini( array $c, string $key, string $prompt ) {
+	/** همان سرویس OpenAI با تصویر مرجع: ‎/images/edits‎ (multipart). */
+	private static function call_openai_edit( array $c, string $key, string $prompt, array $images, string $url ) {
+		$fields = array(
+			'model'  => $c['model'],
+			'prompt' => $prompt,
+			'n'      => '1',
+		);
+		$size = 'custom' === $c['tier'] ? $c['size'] : self::TIERS[ $c['tier'] ][0];
+		if ( '' !== $size ) {
+			$fields['size'] = $size;
+		}
+		if ( '' !== $c['quality'] ) {
+			$fields['quality'] = $c['quality'];
+		}
+		$send = static function ( array $fields ) use ( $url, $key, $images ) {
+			$boundary = 'rokhdadyar' . wp_generate_password( 16, false, false );
+			return Client::post(
+				$url,
+				array(
+					'Authorization' => 'Bearer ' . $key,
+					'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
+				),
+				self::multipart( $fields, $images, $boundary ),
+				self::TIMEOUT,
+				self::MAX_BODY
+			);
+		};
+		$json = $send( $fields );
+		foreach ( array( 'quality', 'size' ) as $opt ) {
+			if ( is_wp_error( $json ) && isset( $fields[ $opt ] ) && 400 === (int) ( $json->get_error_data()['upstream'] ?? 0 ) && false !== stripos( $json->get_error_message(), $opt ) ) {
+				unset( $fields[ $opt ] );
+				$json = $send( $fields );
+			}
+		}
+		if ( is_wp_error( $json ) ) {
+			return $json;
+		}
+		$item = $json['data'][0] ?? array();
+		if ( ! empty( $item['b64_json'] ) ) {
+			return self::decode( (string) $item['b64_json'] );
+		}
+		if ( ! empty( $item['url'] ) ) {
+			return self::download( (string) $item['url'] );
+		}
+		return new \WP_Error( 'chk_img_empty', __( 'سرویس تصویر پاسخی بدون تصویر برگرداند.', 'rokhdadyar' ), array( 'status' => 502 ) );
+	}
+
+	/** مدل‌های تصویرساز Gemini از راه generateContent؛ تصویرهای مرجع پیش از متن در همان پیام می‌آیند. */
+	private static function call_gemini( array $c, string $key, string $prompt, array $images = array() ) {
+		$parts = array();
+		foreach ( $images as $im ) {
+			$parts[] = array(
+				'inline_data' => array(
+					'mime_type' => $im['mime'],
+					'data'      => base64_encode( $im['bytes'] ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+				),
+			);
+		}
+		$parts[] = array( 'text' => $prompt );
 		$base = $c['base_url'] ? $c['base_url'] : 'https://generativelanguage.googleapis.com/v1beta';
 		$url  = $base . '/models/' . rawurlencode( $c['model'] ) . ':generateContent';
 		$head = array( 'x-goog-api-key' => $key );
@@ -315,7 +507,7 @@ final class Image {
 			'contents'         => array(
 				array(
 					'role'  => 'user',
-					'parts' => array( array( 'text' => $prompt ) ),
+					'parts' => $parts,
 				),
 			),
 			'generationConfig' => array(
@@ -517,6 +709,8 @@ final class Image {
 			'alt'      => (string) ( $p['alt'] ?? '' ),
 			'prompt'   => (string) ( $p['prompt'] ?? '' ),
 			'custom'   => ! empty( $p['custom'] ),
+			'refs'     => self::ref_list( (array) ( $p['refs'] ?? array() ) ),
+			'role'     => (string) ( $p['role'] ?? '' ),
 			'quota'    => '',
 			'restored' => true,
 		);

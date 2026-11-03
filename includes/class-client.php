@@ -363,7 +363,10 @@ final class Client {
 	/**
 	 * @return array|\WP_Error
 	 */
-	public static function post( string $url, array $headers, ?array $body, ?int $timeout = null, ?int $max_body = null ) {
+	/**
+	 * @param array|string|null $body آرایه = JSON؛ رشته = همان بدنه (مثلاً multipart، با Content-Type خودِ فراخواننده)؛ null = GET.
+	 */
+	public static function post( string $url, array $headers, $body, ?int $timeout = null, ?int $max_body = null ) {
 		$args = array(
 			'method'              => null === $body ? 'GET' : 'POST',
 			'timeout'             => $timeout ? $timeout : ( null === $body ? 15 : self::TIMEOUT ),
@@ -372,7 +375,7 @@ final class Client {
 			'headers'             => $headers + array( 'Content-Type' => 'application/json' ),
 		);
 		if ( null !== $body ) {
-			$args['body']        = wp_json_encode( $body );
+			$args['body']        = is_string( $body ) ? $body : wp_json_encode( $body );
 			$args['data_format'] = 'body';
 		}
 		// حالت موازی (complete_many): مرحلهٔ اول فقط درخواست جمع می‌شود، مرحلهٔ دوم پاسخِ آماده پردازش می‌شود.

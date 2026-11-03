@@ -155,6 +155,50 @@
 		} );
 	}
 
+	/* تصویرهای مرجع پیش‌فرض: انتخاب از کتابخانهٔ رسانه. */
+	function syncRefs() {
+		var list = form.querySelector( '[data-refs-list]' );
+		var ids = [].map.call( list.querySelectorAll( '.chk-refs__item' ), function ( n ) {
+			return n.getAttribute( 'data-id' );
+		} );
+		form.querySelector( '[data-refs-input]' ).value = ids.join( ',' );
+		list.querySelector( '[data-refs-add]' ).hidden = ids.length >= 4;
+	}
+	function pickRefs() {
+		if ( ! window.wp || ! window.wp.media ) {
+			return;
+		}
+		var frame = window.wp.media( { title: t.imgRefsPick || '', library: { type: 'image' }, multiple: true, button: { text: t.imgRefsUse || 'OK' } } );
+		frame.on( 'select', function () {
+			var list = form.querySelector( '[data-refs-list]' );
+			var add = list.querySelector( '[data-refs-add]' );
+			frame.state().get( 'selection' ).each( function ( m ) {
+				var a = m.toJSON();
+				if ( list.querySelectorAll( '.chk-refs__item' ).length >= 4 || list.querySelector( '[data-id="' + a.id + '"]' ) ) {
+					return;
+				}
+				var item = document.createElement( 'span' );
+				item.className = 'chk-refs__item';
+				item.setAttribute( 'data-id', a.id );
+				var img = document.createElement( 'img' );
+				img.src = ( a.sizes && a.sizes.thumbnail ? a.sizes.thumbnail.url : a.url );
+				img.alt = '';
+				var x = document.createElement( 'button' );
+				x.type = 'button';
+				x.className = 'chk-refs__x';
+				x.setAttribute( 'data-refs-remove', '' );
+				x.setAttribute( 'aria-label', t.imgRefRemove || '×' );
+				x.textContent = '×';
+				item.appendChild( img );
+				item.appendChild( x );
+				list.insertBefore( item, add );
+			} );
+			syncRefs();
+		} );
+		frame.open();
+		frame.content.mode( 'browse' ); // همیشه کتابخانه، نه زبانهٔ آپلود (آپلود هم همان‌جا هست).
+	}
+
 	function health( btn ) {
 		var box = form.querySelector( '[data-health]' );
 		var out = box.querySelector( '[data-health-out]' );
@@ -212,6 +256,11 @@
 			} ).then( function () {
 				b.disabled = false;
 			} );
+		} else if ( b.hasAttribute( 'data-refs-add' ) ) {
+			pickRefs();
+		} else if ( b.hasAttribute( 'data-refs-remove' ) ) {
+			b.parentNode.remove();
+			syncRefs();
 		} else if ( b.hasAttribute( 'data-health-run' ) ) {
 			health( b );
 		} else if ( b.hasAttribute( 'data-health-repair' ) ) {

@@ -341,7 +341,9 @@ final class Rest {
 			get_post( (int) $req['post_id'] ),
 			$req->has_param( 'content' ) ? (string) $req['content'] : null,
 			$req->has_param( 'title' ) ? (string) $req['title'] : null,
-			sanitize_textarea_field( (string) $req['prompt'] )
+			sanitize_textarea_field( (string) $req['prompt'] ),
+			is_array( $req['refs'] ) ? array_map( 'intval', $req['refs'] ) : array(),
+			sanitize_key( (string) $req['ref_role'] )
 		);
 		return rest_ensure_response( Made::pass( (int) $req['post_id'], 'image', $res ) );
 	}
