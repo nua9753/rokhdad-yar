@@ -19,6 +19,7 @@ final class Admin {
 
 		// ستون فهرست نوشته‌ها: فقط روی edit.php و هنگام «ویرایش سریع».
 		add_action( 'load-edit.php', array( __CLASS__, 'list_hooks' ) );
+		add_action( 'load-edit.php', array( 'Rokhdadyar\\Toolbox', 'list_hooks' ) );
 		add_action( 'wp_ajax_inline-save', array( __CLASS__, 'list_hooks' ), 0 );
 
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );

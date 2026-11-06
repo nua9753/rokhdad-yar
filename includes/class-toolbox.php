@@ -103,6 +103,79 @@ final class Toolbox {
 		} ) );
 	}
 
+	/* ---------- فهرست نوشته‌ها: کار گروهی «مطلب مهم» ---------- */
+
+	/** فقط روی edit.php و فقط وقتی ابزار «مطالب مهم» برای این کاربر روشن است. */
+	public static function list_hooks(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$type = sanitize_key( $_REQUEST['post_type'] ?? 'post' );
+		if ( ! self::can( 'important' ) || ! in_array( $type, (array) Settings::get( 'post_types' ), true ) ) {
+			return;
+		}
+		add_filter( 'bulk_actions-edit-' . $type, array( __CLASS__, 'bulk_actions' ) );
+		add_filter( 'handle_bulk_actions-edit-' . $type, array( __CLASS__, 'bulk_handle' ), 10, 3 );
+		add_filter( 'display_post_states', array( __CLASS__, 'post_state' ), 10, 2 );
+		add_action( 'admin_notices', array( __CLASS__, 'bulk_notice' ) );
+		add_filter(
+			'removable_query_args',
+			static function ( array $args ): array {
+				return array_merge( $args, array( 'chk_imp', 'chk_imp_on' ) );
+			}
+		);
+	}
+
+	public static function bulk_actions( array $actions ): array {
+		$actions['rokhdadyar_important']   = __( 'مهم کردن در رخدادیار', 'rokhdadyar' );
+		$actions['rokhdadyar_unimportant'] = __( 'برداشتن مهم شده رخدادیار', 'rokhdadyar' );
+		return $actions;
+	}
+
+	/** وردپرس خودش nonce کار گروهی را بررسی کرده است؛ اینجا فقط اجازهٔ ویرایش هر مطلب. */
+	public static function bulk_handle( string $redirect, string $action, array $ids ): string {
+		if ( ! in_array( $action, array( 'rokhdadyar_important', 'rokhdadyar_unimportant' ), true ) || ! self::can( 'important' ) ) {
+			return $redirect;
+		}
+		$on   = 'rokhdadyar_important' === $action;
+		$done = 0;
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			if ( $id && current_user_can( 'edit_post', $id ) ) {
+				Links::mark( $id, $on );
+				++$done;
+			}
+		}
+		return add_query_arg(
+			array(
+				'chk_imp'    => $done,
+				'chk_imp_on' => $on ? 1 : 0,
+			),
+			remove_query_arg( array( 'chk_imp', 'chk_imp_on' ), $redirect )
+		);
+	}
+
+	/** برچسب کوچک «مهم» کنار عنوان، تا معلوم باشد کدام‌ها انتخاب شده‌اند. */
+	public static function post_state( array $states, \WP_Post $post ): array {
+		if ( get_post_meta( $post->ID, Links::META, true ) ) {
+			$states['rokhdadyar_important'] = __( 'مهم', 'rokhdadyar' );
+		}
+		return $states;
+	}
+
+	public static function bulk_notice(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		if ( ! isset( $_GET['chk_imp'] ) ) {
+			return;
+		}
+		$n  = (int) $_GET['chk_imp']; // phpcs:ignore WordPress.Security.NonceVerification
+		$on = ! empty( $_GET['chk_imp_on'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$msg = $on
+			/* translators: %s: number of posts */
+			? sprintf( __( '%s مطلب در رخدادیار مهم شد.', 'rokhdadyar' ), number_format_i18n( $n ) )
+			/* translators: %s: number of posts */
+			: sprintf( __( 'مهم بودن %s مطلب در رخدادیار برداشته شد.', 'rokhdadyar' ), number_format_i18n( $n ) );
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';
+	}
+
 	/* ---------- ویرایشگر کلاسیک: جعبهٔ جدا ---------- */
 
 	public static function classic_box( string $post_type ): void {
