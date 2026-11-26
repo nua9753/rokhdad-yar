@@ -13,6 +13,8 @@ $chk_rl    = Access::roles();
 $chk_map   = (array) ( Pin::front()['map'] ?? array() );
 $chk_imp   = $chk_tools['important'];
 $chk_imps  = $chk_imp['on'] ? Links::index() : array();
+$chk_views = $chk_tools['views_90d'];
+$chk_views_last4 = $chk_views['token'] ? substr( (string) $chk_views['token'], -4 ) : '';
 ?>
 		<!-- جعبه ابزار -->
 		<section class="chk-panel" data-panel="toolbox">
@@ -184,5 +186,51 @@ $chk_imps  = $chk_imp['on'] ? Links::index() : array();
 					</div>
 				</div>
 				<p class="chk-hint"><?php esc_html_e( 'دکمهٔ «لینک داخلی» را هر کس که به ابزارهای متنی (عنوان و چکیده) دسترسی دارد می‌بیند.', 'rokhdadyar' ); ?></p>
+			</article>
+
+			<article class="chk-card chk-tool">
+				<header class="chk-tool__head">
+					<label class="chk-check">
+						<input type="checkbox" name="chk[tools][views_90d][on]" value="1" <?php checked( $chk_views['on'] ); ?>>
+						<span>
+							<strong><?php esc_html_e( 'بازدید ۹۰ روزه', 'rokhdadyar' ); ?></strong>
+							<em><?php esc_html_e( 'بازدید صفحه‌های نوشته را از پنل رخدادچکر می‌خواند و در فهرست نوشته‌ها نشان می‌دهد.', 'rokhdadyar' ); ?></em>
+						</span>
+					</label>
+				</header>
+				<div class="chk-grid">
+					<label class="chk-field chk-field--wide">
+						<span><?php esc_html_e( 'آدرس پنل', 'rokhdadyar' ); ?></span>
+						<input type="url" class="chk-ltr" name="chk[tools][views_90d][panel_url]" value="<?php echo esc_attr( $chk_views['panel_url'] ); ?>" placeholder="https://amar.rokhdad.site">
+					</label>
+					<label class="chk-field chk-field--wide">
+						<span><?php esc_html_e( 'توکن', 'rokhdadyar' ); ?> <em><?php esc_html_e( 'بعد از ذخیره فقط چهار حرف آخر نمایش داده می‌شود.', 'rokhdadyar' ); ?></em></span>
+						<input type="password" class="chk-ltr" name="chk[tools][views_90d][token]" value="" placeholder="<?php echo esc_attr( $chk_views_last4 ? '••••' . $chk_views_last4 : 'توکن رخدادچکر' ); ?>" autocomplete="new-password" spellcheck="false">
+					</label>
+				</div>
+				<p class="chk-hint">
+					<button type="button" class="button" data-views-test><?php esc_html_e( 'آزمایش اتصال', 'rokhdadyar' ); ?></button>
+					<span class="chk-test" data-views-test-out aria-live="polite"></span>
+				</p>
+				<p class="chk-hint">
+					<?php
+					/* translators: 1: last sync date, 2: post count */
+					echo esc_html( sprintf( __( 'آخرین همگام‌سازی: %1$s · %2$s نوشته', 'rokhdadyar' ), $chk_views['last_sync'] ? wp_date( get_option( 'date_format' ) . ' H:i', strtotime( $chk_views['last_sync'] ) ) : '—', number_format_i18n( (int) $chk_views['last_count'] ) ) );
+					?>
+				</p>
+				<?php if ( $chk_views['last_error'] ) : ?>
+					<p class="chk-test is-bad"><?php echo esc_html( $chk_views['last_error'] ); ?></p>
+				<?php endif; ?>
+				<div class="chk-tool__roles">
+					<p class="chk-tool__label"><?php esc_html_e( 'چه نقش‌هایی بازدید ۹۰ روزه را در فهرست نوشته‌ها ببینند', 'rokhdadyar' ); ?></p>
+					<div class="chk-checks">
+						<?php foreach ( $chk_rl as $chk_rs => $chk_rn ) : ?>
+							<label class="chk-check">
+								<input type="checkbox" name="chk[tools][views_90d][roles][]" value="<?php echo esc_attr( $chk_rs ); ?>" <?php checked( in_array( $chk_rs, (array) $chk_views['roles'], true ) ); ?>>
+								<span><?php echo esc_html( $chk_rn ); ?></span>
+							</label>
+						<?php endforeach; ?>
+					</div>
+				</div>
 			</article>
 		</section>

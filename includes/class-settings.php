@@ -348,6 +348,17 @@ final class Settings {
 		update_option( self::OPTION, $new, false );
 		self::$cache = null;
 		Pin::sync_settings(); // تنظیمات نمایش و نقشهٔ پین‌ها برای سایت.
+		Views90d::sync_schedule();
+	}
+
+	/** Update non-form state belonging to a toolbox tool without exposing secrets in the form. */
+	public static function update_tool_state( string $tool, array $state ): void {
+		$current = self::get();
+		$tools   = is_array( $current['tools'] ?? null ) ? $current['tools'] : array();
+		$tools[ $tool ] = array_merge( (array) ( $tools[ $tool ] ?? array() ), $state );
+		$current['tools'] = $tools;
+		update_option( self::OPTION, $current, false );
+		self::$cache = $current;
 	}
 
 	public static function sanitize_profile( array $p ): array {

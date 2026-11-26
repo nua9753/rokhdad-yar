@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       رخدادیار — عنوان، چکیده، نامک و تصویر شاخص با هوش مصنوعی
  * Description:       ساخت عنوان، چکیده، نامک، دسته و برچسب و تصویر شاخص نوشته با هوش مصنوعی؛ با مرکز کنترل برای مدل‌ها، Base URL، کلید API و پرامپت‌ها.
- * Version:           2.21.0
+ * Version:           2.22.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            رخدادیار
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ROKHDADYAR_VER', '2.21.0' );
+define( 'ROKHDADYAR_VER', '2.22.0' );
 define( 'ROKHDADYAR_FILE', __FILE__ );
 define( 'ROKHDADYAR_DIR', __DIR__ . '/' );
 
@@ -43,6 +43,9 @@ if ( is_admin() || wp_doing_cron() ) {
 }
 
 add_action( 'rest_api_init', array( 'Rokhdadyar\\Rest', 'register' ) );
+add_action( 'rest_api_init', array( 'Rokhdadyar\\Views90d', 'register_rest' ), 5 );
+register_activation_hook( ROKHDADYAR_FILE, array( 'Rokhdadyar\\Views90d', 'activate' ) );
+add_action( 'rokhdadyar_views90d_sync', array( 'Rokhdadyar\\Views90d', 'sync' ) );
 // محافظ نامک: فقط هنگام ذخیرهٔ نوشته صدا زده می‌شود (فرم، REST، ویرایش سریع)؛ بار دیگری ندارد.
 add_filter( 'wp_insert_post_data', array( 'Rokhdadyar\\Guard', 'filter' ), 99, 2 );
 add_action( 'post_updated', array( 'Rokhdadyar\\Guard', 'track' ), 10, 3 );

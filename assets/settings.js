@@ -277,6 +277,25 @@
 			}
 		} else if ( b.hasAttribute( 'data-test' ) ) {
 			testProfile( b.closest( '[data-profile]' ), b );
+		} else if ( b.hasAttribute( 'data-views-test' ) ) {
+			var viewsOut = form.querySelector( '[data-views-test-out]' );
+			var viewsUrl = form.querySelector( '[name="chk[tools][views_90d][panel_url]"]' );
+			var viewsToken = form.querySelector( '[name="chk[tools][views_90d][token]"]' );
+			viewsOut.className = 'chk-test';
+			viewsOut.textContent = 'در حال آزمایش…';
+			b.disabled = true;
+			call( 'views90d/test', {
+				panel_url: viewsUrl ? viewsUrl.value : '',
+				token: viewsToken ? viewsToken.value : '',
+			} ).then( function ( j ) {
+				viewsOut.className = 'chk-test is-ok';
+				viewsOut.textContent = 'اتصال موفق بود · ' + ( j.count || 0 ) + ' ردیف';
+			} ).catch( function ( e ) {
+				viewsOut.className = 'chk-test is-bad';
+				viewsOut.textContent = e.message;
+			} ).then( function () {
+				b.disabled = false;
+			} );
 		} else if ( b.hasAttribute( 'data-reset' ) ) {
 			var key = b.getAttribute( 'data-reset' );
 			form.querySelector( '[data-prompt="' + key + '"]' ).value = cfg.defaults[ key ];

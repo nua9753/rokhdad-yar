@@ -20,6 +20,7 @@ final class Admin {
 		// ستون فهرست نوشته‌ها: فقط روی edit.php و هنگام «ویرایش سریع».
 		add_action( 'load-edit.php', array( __CLASS__, 'list_hooks' ) );
 		add_action( 'load-edit.php', array( 'Rokhdadyar\\Toolbox', 'list_hooks' ) );
+		add_action( 'load-edit.php', array( 'Rokhdadyar\\Views90d', 'list_hooks' ) );
 		add_action( 'wp_ajax_inline-save', array( __CLASS__, 'list_hooks' ), 0 );
 
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
@@ -242,7 +243,12 @@ final class Admin {
 
 		$is_list = 'edit.php' === $hook;
 		$is_edit = in_array( $hook, array( 'post.php', 'post-new.php' ), true );
-		if ( ( ! $is_list && ! $is_edit ) || ! in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true ) || Access::none() ) {
+		$views_only = $is_list && 'post' === $screen->post_type && Views90d::can();
+		if ( $views_only && ! in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true ) ) {
+			wp_enqueue_style( 'rokhdadyar', $url . 'admin.css', array(), ROKHDADYAR_VER );
+			return;
+		}
+		if ( ( ! $is_list && ! $is_edit ) || ! in_array( $screen->post_type, (array) Settings::get( 'post_types' ), true ) || ( Access::none() && ! $views_only ) ) {
 			return;
 		}
 		wp_enqueue_style( 'rokhdadyar', $url . 'admin.css', array(), ROKHDADYAR_VER );
