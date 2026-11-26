@@ -12,6 +12,7 @@ delete_post_meta_by_key( '_rokhdadyar_made' );
 delete_post_meta_by_key( '_rokhdadyar_img_pending' );
 wp_clear_scheduled_hook( 'rokhdadyar_cleanup' );
 wp_clear_scheduled_hook( 'rokhdadyar_views90d_sync' );
+delete_option( 'rokhdadyar_views_db_version' );
 delete_option( 'rokhdadyar_front' );
 delete_site_transient( 'rokhdadyar_gh_release' );
 delete_post_meta_by_key( '_rokhdadyar_pin' );

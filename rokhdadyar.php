@@ -45,6 +45,7 @@ if ( is_admin() || wp_doing_cron() ) {
 add_action( 'rest_api_init', array( 'Rokhdadyar\\Rest', 'register' ) );
 add_action( 'rest_api_init', array( 'Rokhdadyar\\Views90d', 'register_rest' ), 5 );
 register_activation_hook( ROKHDADYAR_FILE, array( 'Rokhdadyar\\Views90d', 'activate' ) );
+add_action( 'admin_init', array( 'Rokhdadyar\\Views90d', 'maybe_upgrade' ) );
 add_action( 'rokhdadyar_views90d_sync', array( 'Rokhdadyar\\Views90d', 'sync' ) );
 // محافظ نامک: فقط هنگام ذخیرهٔ نوشته صدا زده می‌شود (فرم، REST، ویرایش سریع)؛ بار دیگری ندارد.
 add_filter( 'wp_insert_post_data', array( 'Rokhdadyar\\Guard', 'filter' ), 99, 2 );

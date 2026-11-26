@@ -13,6 +13,12 @@ final class Views90d {
 	const CRON = 'rokhdadyar_views90d_sync';
 	const COLUMN = 'rokhdadyar_views90d';
 	const API_LIMIT = 20000;
+	const DB_VERSION = '1';
+	const DB_OPTION = 'rokhdadyar_views_db_version';
+	const LOCK = 'rokhdadyar_views90d_sync_lock';
+
+	/** @var bool|null */
+	private static $table_exists = null;
 
 	public static function table(): string {
 		global $wpdb;
@@ -20,8 +26,21 @@ final class Views90d {
 	}
 
 	public static function activate(): void {
-		self::create_table();
+		self::ensure_db();
 		self::sync_schedule();
+	}
+
+	/** Create/upgrade the table for sites upgraded from an older plugin version. */
+	public static function maybe_upgrade(): void {
+		self::ensure_db();
+	}
+
+	private static function ensure_db(): void {
+		$version = (string) get_option( self::DB_OPTION, '' );
+		if ( self::DB_VERSION !== $version || ! self::table_exists() ) {
+			self::create_table();
+			update_option( self::DB_OPTION, self::DB_VERSION, false );
+		}
 	}
 
 	public static function create_table(): void {
@@ -37,6 +56,19 @@ final class Views90d {
 			KEY updated_at (updated_at)
 		) {$charset};";
 		dbDelta( $sql );
+		self::$table_exists = null;
+	}
+
+	private static function table_exists(): bool {
+		if ( null !== self::$table_exists ) {
+			return self::$table_exists;
+		}
+		global $wpdb;
+		$table = self::table();
+		$like  = $wpdb->esc_like( $table );
+		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		self::$table_exists = ( $table === $found );
+		return self::$table_exists;
 	}
 
 	public static function config(): array {
@@ -74,9 +106,12 @@ final class Views90d {
 	}
 
 	public static function sync_schedule(): void {
-		wp_clear_scheduled_hook( self::CRON );
-		if ( self::enabled() && self::config()['panel_url'] ) {
-			wp_schedule_single_event( self::next_run(), self::CRON );
+		if ( ! self::enabled() || ! self::config()['panel_url'] ) {
+			wp_clear_scheduled_hook( self::CRON );
+			return;
+		}
+		if ( ! wp_next_scheduled( self::CRON ) ) {
+			wp_schedule_event( self::next_run(), 'daily', self::CRON );
 		}
 	}
 
@@ -90,8 +125,19 @@ final class Views90d {
 		return $next->getTimestamp();
 	}
 
-	/** Run one complete sync. The next single event is always scheduled again. */
+	/** Run one complete sync. The daily event remains scheduled even if this run fails. */
 	public static function sync(): void {
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			@wp_raise_memory_limit( 'cron' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+		self::ensure_db();
+		if ( get_transient( self::LOCK ) ) {
+			return;
+		}
+		set_transient( self::LOCK, 1, 30 * MINUTE_IN_SECONDS );
 		try {
 			if ( self::enabled() ) {
 				self::run_sync();
@@ -99,7 +145,7 @@ final class Views90d {
 		} catch ( \Throwable $e ) {
 			self::set_state( array( 'last_error' => self::safe_error( $e->getMessage(), self::config()['token'] ) ) );
 		} finally {
-			self::sync_schedule();
+			delete_transient( self::LOCK );
 		}
 	}
 
@@ -170,28 +216,36 @@ final class Views90d {
 	}
 
 	private static function published_posts(): array {
+		global $wpdb;
 		$map = array();
-		$page = 1;
+		$last_id = 0;
 		do {
-			$ids = get_posts(
-				array(
-					'post_type'      => 'post',
-					'post_status'    => 'publish',
-					'posts_per_page' => 2000,
-					'paged'          => $page,
-					'orderby'        => 'ID',
-					'order'          => 'ASC',
-					'fields'         => 'ids',
-					'no_found_rows'  => true,
+			$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND ID > %d ORDER BY ID ASC LIMIT 2000",
+					$last_id
 				)
 			);
+			$ids = array_map( 'intval', (array) $ids );
+			if ( $ids && function_exists( '_prime_post_caches' ) ) {
+				_prime_post_caches( $ids, true, true );
+			}
 			foreach ( $ids as $post_id ) {
 				$permalink = get_permalink( (int) $post_id );
 				if ( $permalink ) {
 					$map[ (int) $post_id ] = self::normalize_path( wp_parse_url( $permalink, PHP_URL_PATH ) ?: '/' );
 				}
 			}
-			++$page;
+			if ( $ids ) {
+				$last_id = (int) end( $ids );
+			}
+			if ( $ids && function_exists( 'wp_cache_flush_runtime' ) ) {
+				wp_cache_flush_runtime();
+			} else {
+				foreach ( $ids as $post_id ) {
+					clean_post_cache( (int) $post_id );
+				}
+			}
 		} while ( count( $ids ) === 2000 );
 		return $map;
 	}
@@ -303,7 +357,7 @@ final class Views90d {
 		if ( self::COLUMN !== $column ) {
 			return;
 		}
-		$views = self::row_value( $post_id );
+		$views = self::table_exists() ? self::row_value( $post_id ) : null;
 		echo null === $views ? '&mdash;' : esc_html( number_format_i18n( (int) $views ) );
 	}
 
@@ -313,7 +367,7 @@ final class Views90d {
 	}
 
 	public static function clauses( array $clauses, \WP_Query $query ): array {
-		if ( ! is_admin() || ! $query->is_main_query() || 'post' !== ( $query->get( 'post_type' ) ?: 'post' ) || ! self::can() ) {
+		if ( ! is_admin() || ! $query->is_main_query() || 'post' !== ( $query->get( 'post_type' ) ?: 'post' ) || ! self::can() || ! self::table_exists() ) {
 			return $clauses;
 		}
 		global $wpdb;
