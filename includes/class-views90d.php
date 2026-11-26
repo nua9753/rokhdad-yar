@@ -75,7 +75,7 @@ final class Views90d {
 
 	public static function sync_schedule(): void {
 		wp_clear_scheduled_hook( self::CRON );
-		if ( self::enabled() && self::config()['token'] && self::config()['panel_url'] ) {
+		if ( self::enabled() && self::config()['panel_url'] ) {
 			wp_schedule_single_event( self::next_run(), self::CRON );
 		}
 	}
