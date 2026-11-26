@@ -202,7 +202,9 @@ final class Views90d {
 		$now = current_time( 'mysql' );
 		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		try {
-			$wpdb->query( "DELETE FROM {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( false === $wpdb->query( "DELETE FROM {$table}" ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				throw new \RuntimeException( 'حذف داده‌های قبلی بازدید انجام نشد.' );
+			}
 			foreach ( array_chunk( $values, 1000 ) as $chunk ) {
 				$placeholders = array();
 				$args = array();
