@@ -16,6 +16,7 @@
 
 /* ---------- دکمهٔ کوچک ---------- */
 .column-rokhdadyar { width: 210px; }
+.column-rokhdadyar_views90d { width: 110px; text-align: right; }
 .chk-col-head { display: inline-flex; align-items: center; gap: 6px; color: var(--chk-muted); white-space: nowrap; }
 .chk-actions { display: flex; flex-wrap: wrap; gap: 6px 4px; }
 .chk-btn.chk-btn--hidden { display: none; }

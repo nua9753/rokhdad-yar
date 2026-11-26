@@ -15,6 +15,7 @@ final class Toolbox {
 		return array(
 			'pin'       => __( 'پین در دسته‌بندی', 'rokhdadyar' ),
 			'important' => __( 'مطالب مهم', 'rokhdadyar' ),
+			'views_90d' => __( 'بازدید ۹۰ روزه', 'rokhdadyar' ),
 		);
 	}
 
@@ -32,6 +33,15 @@ final class Toolbox {
 				'roles' => array( 'editor' ),
 				'links' => 1, // پیشنهاد لینک داخلی با هوش مصنوعی فقط به مطالب مهم
 				'max'   => 5, // حداکثر لینک پیشنهادی برای هر مطلب
+			),
+			'views_90d' => array(
+				'on'         => 0,
+				'roles'      => array( 'editor' ),
+				'panel_url'  => 'https://amar.rokhdad.site',
+				'token'      => '',
+				'last_sync'  => '',
+				'last_count' => 0,
+				'last_error' => '',
 			),
 		);
 	}
@@ -51,6 +61,11 @@ final class Toolbox {
 		$p     = (array) ( $raw['pin'] ?? array() );
 		$color = sanitize_hex_color( (string) ( $p['color'] ?? '' ) );
 		$label = sanitize_text_field( (string) ( $p['label'] ?? '' ) );
+		$v     = (array) ( $raw['views_90d'] ?? array() );
+		$old   = self::config()['views_90d'] ?? $d['views_90d'];
+		$views_roles = array_values( array_intersect( $roles, array_map( 'sanitize_key', (array) ( $v['roles'] ?? array() ) ) ) );
+		$url   = Views90d::sanitize_url( $v['panel_url'] ?? $d['views_90d']['panel_url'] );
+		$token = trim( (string) ( $v['token'] ?? '' ) );
 		return array(
 			'pin' => array(
 				'on'    => empty( $p['on'] ) ? 0 : 1,
@@ -64,6 +79,15 @@ final class Toolbox {
 				'roles' => array_values( array_intersect( $roles, array_map( 'sanitize_key', (array) ( $raw['important']['roles'] ?? array() ) ) ) ),
 				'links' => empty( $raw['important']['links'] ) ? 0 : 1,
 				'max'   => max( 1, min( 10, (int) ( $raw['important']['max'] ?? 5 ) ) ),
+			),
+			'views_90d' => array(
+				'on'         => empty( $v['on'] ) ? 0 : 1,
+				'roles'      => $views_roles,
+				'panel_url'  => $url,
+				'token'      => '' !== $token ? sanitize_text_field( $token ) : (string) ( $old['token'] ?? '' ),
+				'last_sync'  => sanitize_text_field( (string) ( $old['last_sync'] ?? '' ) ),
+				'last_count' => max( 0, (int) ( $old['last_count'] ?? 0 ) ),
+				'last_error' => sanitize_text_field( (string) ( $old['last_error'] ?? '' ) ),
 			),
 		);
 	}

@@ -11,6 +11,8 @@ delete_post_meta_by_key( '_rokhdadyar_history' );
 delete_post_meta_by_key( '_rokhdadyar_made' );
 delete_post_meta_by_key( '_rokhdadyar_img_pending' );
 wp_clear_scheduled_hook( 'rokhdadyar_cleanup' );
+wp_clear_scheduled_hook( 'rokhdadyar_views90d_sync' );
+delete_option( 'rokhdadyar_views_db_version' );
 delete_option( 'rokhdadyar_front' );
 delete_site_transient( 'rokhdadyar_gh_release' );
 delete_post_meta_by_key( '_rokhdadyar_pin' );
@@ -18,5 +20,7 @@ delete_post_meta_by_key( '_rokhdadyar_important' );
 delete_transient( 'chk_important' );
 
 global $wpdb;
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}rokhdad_views" );
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_chk\_%' OR option_name LIKE '\_transient\_timeout\_chk\_%' OR option_name LIKE 'rokhdadyar\_usage\_%'" );
