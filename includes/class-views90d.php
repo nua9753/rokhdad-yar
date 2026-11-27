@@ -12,7 +12,8 @@ final class Views90d {
 	const TOOL = 'views_90d';
 	const CRON = 'rokhdadyar_views90d_sync';
 	const COLUMN = 'rokhdadyar_views90d';
-	const API_LIMIT = 20000;
+	const API_LIMIT = 2000;
+	const REQUEST_TIMEOUT = 60;
 	const DB_VERSION = '1';
 	const DB_OPTION = 'rokhdadyar_views_db_version';
 	const LOCK = 'rokhdadyar_views90d_sync_lock';
@@ -126,7 +127,7 @@ final class Views90d {
 	}
 
 	/** Run one complete sync. The daily event remains scheduled even if this run fails. */
-	public static function sync(): void {
+	public static function sync(): array {
 		if ( function_exists( 'wp_raise_memory_limit' ) ) {
 			@wp_raise_memory_limit( 'cron' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
@@ -135,21 +136,24 @@ final class Views90d {
 		}
 		self::ensure_db();
 		if ( get_transient( self::LOCK ) ) {
-			return;
+			return array( 'ok' => false, 'locked' => true, 'message' => 'همگام‌سازی در حال اجراست.' );
 		}
 		set_transient( self::LOCK, 1, 30 * MINUTE_IN_SECONDS );
 		try {
-			if ( self::enabled() ) {
-				self::run_sync();
+			if ( ! self::enabled() ) {
+				return array( 'ok' => false, 'message' => 'ابزار بازدید ۹۰ روزه خاموش است.' );
 			}
+			return array( 'ok' => true, 'count' => self::run_sync() );
 		} catch ( \Throwable $e ) {
-			self::set_state( array( 'last_error' => self::safe_error( $e->getMessage(), self::config()['token'] ) ) );
+			$message = self::safe_error( $e->getMessage(), self::config()['token'] );
+			self::set_state( array( 'last_error' => $message ) );
+			return array( 'ok' => false, 'message' => $message );
 		} finally {
 			delete_transient( self::LOCK );
 		}
 	}
 
-	private static function run_sync(): void {
+	private static function run_sync(): int {
 		$config = self::config();
 		if ( ! $config['token'] ) {
 			throw new \RuntimeException( 'توکن رخدادچکر تنظیم نشده است.' );
@@ -178,6 +182,7 @@ final class Views90d {
 				'last_error' => '',
 			)
 		);
+		return count( $values );
 	}
 
 	private static function fetch_all( string $panel_url, string $token, int $limit = self::API_LIMIT, bool $single = false ): array {
@@ -189,23 +194,9 @@ final class Views90d {
 				array( 'offset' => $offset, 'limit' => $limit ),
 				untrailingslashit( $panel_url ) . '/api/wp/page-views'
 			);
-			$response = wp_remote_get(
-				$url,
-				array(
-					'timeout' => 30,
-					'headers' => array( 'Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json' ),
-				)
-			);
-			if ( is_wp_error( $response ) ) {
-				throw new \RuntimeException( 'اتصال به پنل رخدادچکر برقرار نشد.' );
-			}
-			$status = (int) wp_remote_retrieve_response_code( $response );
-			if ( $status < 200 || $status >= 300 ) {
-				throw new \RuntimeException( 'پنل رخدادچکر پاسخ معتبر نداد (HTTP ' . $status . ').' );
-			}
-			$data = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( ! is_array( $data ) || ! isset( $data['rows'] ) || ! is_array( $data['rows'] ) ) {
-				throw new \RuntimeException( 'پاسخ بازدید ۹۰ روزه معتبر نیست.' );
+			$data = self::fetch_page( $url, $token, $offset );
+			if ( ! isset( $data['rows'] ) || ! is_array( $data['rows'] ) ) {
+				throw new \RuntimeException( 'offset ' . $offset . ': پاسخ بازدید ۹۰ روزه معتبر نیست.' );
 			}
 			$batch = $data['rows'];
 			$rows = array_merge( $rows, $batch );
@@ -213,6 +204,43 @@ final class Views90d {
 			$total = isset( $data['total'] ) ? max( 0, (int) $data['total'] ) : null;
 		} while ( ! $single && count( $batch ) === $limit && ( null === $total || $offset < $total ) );
 		return $rows;
+	}
+
+	private static function fetch_page( string $url, string $token, int $offset ): array {
+		$last_error = '';
+		for ( $attempt = 1; $attempt <= 3; ++$attempt ) {
+			$response = wp_remote_get(
+				$url,
+				array(
+					'timeout' => self::REQUEST_TIMEOUT,
+					'headers' => array( 'Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json' ),
+				)
+			);
+			$retry = false;
+			if ( is_wp_error( $response ) ) {
+				$code = (string) $response->get_error_code();
+				$text = (string) $response->get_error_message();
+				$last_error = $code ? $code . ': ' . $text : $text;
+				$retry = true;
+			} else {
+				$status = (int) wp_remote_retrieve_response_code( $response );
+				if ( $status >= 200 && $status < 300 ) {
+					$data = json_decode( wp_remote_retrieve_body( $response ), true );
+					if ( is_array( $data ) ) {
+						return $data;
+					}
+					throw new \RuntimeException( 'offset ' . $offset . ': پاسخ JSON پنل رخدادچکر معتبر نیست.' );
+				}
+				$reason = trim( (string) wp_remote_retrieve_response_message( $response ) );
+				$last_error = 'HTTP ' . $status . ( $reason ? ' ' . $reason : '' );
+				$retry = 429 === $status || $status >= 500;
+			}
+			if ( ! $retry || 3 === $attempt ) {
+				throw new \RuntimeException( 'offset ' . $offset . ': ' . $last_error );
+			}
+			sleep( 1 === $attempt ? 2 : 5 );
+		}
+		throw new \RuntimeException( 'offset ' . $offset . ': درخواست پنل ناموفق بود.' );
 	}
 
 	private static function published_posts(): array {
@@ -303,6 +331,25 @@ final class Views90d {
 				},
 			)
 		);
+		register_rest_route(
+			Rest::NS,
+			'/views90d/sync',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'manual_sync' ),
+				'permission_callback' => static function () {
+					return current_user_can( 'manage_options' );
+				},
+			)
+		);
+	}
+
+	public static function manual_sync(): \WP_REST_Response {
+		$result = self::sync();
+		if ( ! empty( $result['ok'] ) ) {
+			return new \WP_REST_Response( $result, 200 );
+		}
+		return new \WP_REST_Response( $result, ! empty( $result['locked'] ) ? 409 : 502 );
 	}
 
 	public static function test_connection( \WP_REST_Request $request ): \WP_REST_Response {

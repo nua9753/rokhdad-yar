@@ -296,6 +296,20 @@
 			} ).then( function () {
 				b.disabled = false;
 			} );
+		} else if ( b.hasAttribute( 'data-views-sync' ) ) {
+			var syncOut = form.querySelector( '[data-views-sync-out]' );
+			syncOut.className = 'chk-test';
+			syncOut.textContent = 'در حال همگام‌سازی…';
+			b.disabled = true;
+			call( 'views90d/sync', {} ).then( function ( j ) {
+				syncOut.className = 'chk-test is-ok';
+				syncOut.textContent = 'همگام‌سازی انجام شد · ' + ( j.count || 0 ) + ' نوشته';
+			} ).catch( function ( e ) {
+				syncOut.className = 'chk-test is-bad';
+				syncOut.textContent = e.message;
+			} ).then( function () {
+				b.disabled = false;
+			} );
 		} else if ( b.hasAttribute( 'data-reset' ) ) {
 			var key = b.getAttribute( 'data-reset' );
 			form.querySelector( '[data-prompt="' + key + '"]' ).value = cfg.defaults[ key ];

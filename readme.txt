@@ -2,7 +2,7 @@
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 2.22.0
+Stable tag: 2.22.1
 License: GPL-2.0-or-later
 
 دستیار هوش مصنوعی تحریریه: عنوان، چکیده، نامک، دسته و برچسب، تصویر شاخص، لینک داخلی و بازنویسی پاراگراف — سئوپسند و داخل خود ویرایشگر.
@@ -30,6 +30,10 @@ License: GPL-2.0-or-later
 {content} {title} {excerpt} {categories} {tags} {keyword} {secondary} {styles} {examples} {count} {max_chars} {max_words} {slug_rules} {language} {site_name}
 
 == Changelog ==
+
+= 2.22.1 =
+* همگام‌سازی بازدید ۹۰ روزه با درخواست‌های ۲۰۰۰تایی، timeout شصت‌ثانیه‌ای و سه تلاش مجدد برای خطاهای موقت.
+* نمایش خطای دقیقِ offset و دکمهٔ همگام‌سازی دستی برای مدیران.
 
 = 2.22.0 =
 * ابزار «بازدید ۹۰ روزه» در جعبه‌ابزار: همگام‌سازی شبانه‌ی بازدید صفحه‌ها از رخدادچکر و ستون قابل مرتب‌سازی در فهرست نوشته‌ها.
