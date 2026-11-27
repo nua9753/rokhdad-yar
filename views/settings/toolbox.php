@@ -210,7 +210,11 @@ $chk_views_last4 = $chk_views['token'] ? substr( (string) $chk_views['token'], -
 				</div>
 				<p class="chk-hint">
 					<button type="button" class="button" data-views-test><?php esc_html_e( 'آزمایش اتصال', 'rokhdadyar' ); ?></button>
+					<?php if ( current_user_can( 'manage_options' ) ) : ?>
+						<button type="button" class="button" data-views-sync><?php esc_html_e( 'همگام‌سازی همین حالا', 'rokhdadyar' ); ?></button>
+					<?php endif; ?>
 					<span class="chk-test" data-views-test-out aria-live="polite"></span>
+					<span class="chk-test" data-views-sync-out aria-live="polite"></span>
 				</p>
 				<p class="chk-hint">
 					<?php
